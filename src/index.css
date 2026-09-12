@@ -1,0 +1,80 @@
+:root {
+  --app-background: #f6f7fb;
+  --app-surface: #ffffff;
+  --app-border: #e1e5ee;
+  --app-muted: #5c677a;
+  --app-accent: #a91645;
+  --app-tint: #fff0f3;
+  --app-shadow: 0 8px 28px rgb(24 34 52 / 4%);
+}
+:root[data-mantine-color-scheme='dark'] {
+  --app-background: #121a29;
+  --app-surface: #192234;
+  --app-border: #303b50;
+  --app-muted: #a5afc2;
+  --app-accent: #f38aa4;
+  --app-tint: #302136;
+  --app-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--app-background); }
+#root { min-height: 100dvh; }
+a { text-decoration: none; }
+button, input, textarea { font: inherit; }
+:focus-visible { outline: 3px solid var(--app-accent); outline-offset: 3px; }
+.brand-accent { color: var(--app-accent); }
+.eyebrow { color: var(--app-accent); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.1em; }
+.mantine-Anchor-root { color: var(--app-accent); }
+.mantine-Anchor-root:hover { text-decoration: underline; }
+.mantine-Input-description { color: var(--app-muted); }
+.mantine-Card-root { background: var(--app-surface); border-color: var(--app-border); box-shadow: var(--app-shadow); }
+.mantine-Input-label { margin-bottom: 6px; font-weight: 600; }
+.mantine-Input-input { border-color: var(--app-border); }
+.mantine-Title-root { letter-spacing: -0.035em; text-wrap: balance; }
+.mantine-Table-table { background: var(--app-surface); font-size: 0.9375rem; }
+.mantine-Table-th { color: var(--app-muted); font-weight: 650; white-space: nowrap; }
+.mantine-Table-thead { background: var(--app-background); }
+.mantine-NavLink-root { border-radius: 10px; margin-bottom: 5px; padding: 12px; }
+.mantine-NavLink-label { font-weight: 550; }
+.app-header, .app-navbar { background: var(--app-surface); border-color: var(--app-border); }
+.app-header-inner { justify-content: space-between; }
+.app-main { background: var(--app-background); }
+.app-content { max-width: 1440px; margin: 0 auto; padding: 12px; min-width: 0; }
+.app-content > .mantine-Title-root:first-child { margin-top: 8px; }
+.sidebar-caption { margin: 16px 12px; letter-spacing: 0.12em; }
+.sidebar-footer { border-top: 1px solid var(--app-border); padding-top: 18px; }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 1000; padding: 10px 16px; background: var(--app-surface); color: var(--app-accent); border-radius: 8px; }
+.skip-link:focus { top: 12px; }
+.dashboard-heading { padding: 12px 0 28px; }
+.stat-card { min-height: 150px; }
+.auth-page { min-height: 100dvh; display: flex; flex-direction: column; background: radial-gradient(ellipse at 8% 25%, var(--app-tint), transparent 55%), var(--app-background); }
+.auth-header { display: flex; justify-content: space-between; align-items: center; padding: 28px clamp(20px, 5vw, 80px); }
+.auth-content { width: min(1080px, 100%); margin: auto; padding: 40px 24px; display: grid; grid-template-columns: 1fr 420px; gap: 80px; align-items: center; }
+.auth-content-wide { width: min(1200px, 100%); grid-template-columns: 1fr 560px; gap: 56px; }
+.auth-intro h1 { font-size: clamp(2.5rem, 4vw, 3.75rem); line-height: 1.15; }
+.auth-card { width: 100%; box-shadow: 0 16px 60px rgb(24 34 52 / 8%); }
+.auth-footer { padding: 24px; text-align: center; }
+.rating-guide { background: var(--app-tint); }
+.assessment-container { min-height: 100dvh; }
+.assessment-card { min-height: 0; }
+@media (max-width: 62em) {
+  .auth-content, .auth-content-wide { gap: 36px; grid-template-columns: 1fr 1fr; }
+  .auth-intro h1 { font-size: 2.5rem; }
+}
+@media (max-width: 48em) {
+  .auth-header { padding: 20px; }
+  .auth-content, .auth-content-wide { grid-template-columns: 1fr; max-width: 580px; padding: 20px; gap: 28px; }
+  .auth-intro h1 { font-size: 2rem; }
+  .auth-intro br { display: none; }
+  .auth-intro-note, .auth-intro > .mantine-Text-root:not(.eyebrow) { display: none; }
+  .auth-intro .eyebrow { margin-bottom: 12px; font-size: 0.75rem; }
+  .app-content { padding: 4px; }
+  .assessment-container { height: auto !important; padding: 12px; }
+  .assessment-card { padding: 18px; overflow: visible !important; }
+  .assessment-card form { overflow: visible !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+.signup-program { grid-column: span 2; }
+@media (max-width: 36em) { .signup-program { grid-column: auto; } }

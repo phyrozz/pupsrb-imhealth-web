@@ -1,0 +1,28 @@
+{
+  "questions": [
+    { "domain": "Depression", "question": "Little interest or pleasure in doing things?" },
+    { "domain": "", "question": "Feeling down, depressed, or hopeless?" },
+    { "domain": "Anger", "question": "Feeling more irritated, grouchy, or angry than usual?" },
+    { "domain": "Mania", "question": "Sleeping less than usual, but still have a lot of energy?" },
+    { "domain": "", "question": "Starting lots more projects than usual or doing more risky things than usual?" },
+    { "domain": "Anxiety", "question": "Feeling nervous, anxious, frightened, worried, or on edge?" },
+    { "domain": "", "question": "Feeling panic or being frightened?" },
+    { "domain": "", "question": "Avoiding situations that make you anxious?" },
+    { "domain": "Somatic Symptoms", "question": "Unexplained aches and pains (e.g., head, back, joints, abdomen, legs)?" },
+    { "domain": "", "question": "Feeling that your illnesses are not being taken seriously enough?" },
+    { "domain": "Suicidal Ideation", "question": "Thoughts of actually hurting yourself?" },
+    { "domain": "Psychosis", "question": "Hearing things other people couldn't hear, such as voices even when no one was around?" },
+    { "domain": "", "question": "Feeling that someone could hear your thoughts, or that you could hear what another person was thinking?" },
+    { "domain": "Sleep Problems", "question": "Problems with sleep that affected your sleep quality over all?" },
+    { "domain": "Memory", "question": "Problems with memory (e.g., learning new information) or with location (e.g., finding your way home)?" },
+    { "domain": "Repetitive Thoughts and Behaviors", "question": "Unpleasant thoughts, urges, or images that repeatedly enter your mind?" },
+    { "domain": "", "question": "Feeling driven to perform certain behaviors or mental acts over and over again?" },
+    { "domain": "Dissociation", "question": "Feeling detached or distant from yourself, your body, your physical surroundings, or your memories?" },
+    { "domain": "Personality Functioning", "question": "Not knowing who you really are or what you want out of life?" },
+    { "domain": "", "question": "Not feeling close to other people or enjoying your relationships with them?" },
+    { "domain": "Substance Use", "question": "Drinking at least 4 drinks of any kind of alcohol in a single day?" },
+    { "domain": "", "question": "Smoking any cigarettes, a cigar, or pipe, or using snuff or chewing tobacco?" },
+    { "domain": "", "question": "Using any of the following medicines ON YOUR OWN, that is, without a doctor's prescription, in greater amounts or longer than prescribed?" }
+  ],
+  "responses": ["Not at all", "Slight", "Mild", "Moderate", "Severe"]
+}
