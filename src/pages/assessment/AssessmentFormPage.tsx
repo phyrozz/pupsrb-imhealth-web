@@ -47,6 +47,17 @@ function parsePendingDetails(raw: string, email: string) {
   return details;
 }
 
+function formatAssessmentDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-PH', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'Asia/Manila',
+  }).format(date);
+}
+
 export default function AssessmentFormPage() {
   const navigate = useNavigate();
   const { signOut, session, isLoading: authLoading } = useAuth();
@@ -123,9 +134,7 @@ export default function AssessmentFormPage() {
     return () => { active = false; };
   }, [detailsStatus]);
 
-  const nextAssessmentLabel = availability?.nextAvailableAt
-    ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(availability.nextAvailableAt))
-    : null;
+  const nextAssessmentLabel = formatAssessmentDate(availability?.nextAvailableAt ?? null);
 
   const allAnswered = answers.every(Boolean);
 
@@ -144,9 +153,21 @@ export default function AssessmentFormPage() {
     if (!allAnswered) { setError('Please answer all questions before submitting.'); return; }
     setLoading(true);
     try {
-      await submitAssessment({ responses: answers, questions });
-      setSuccess('Assessment submitted successfully.');
-      setTimeout(() => { signOut(); navigate('/assessment/login'); }, 1200);
+      const result = (await submitAssessment({ responses: answers, questions })).data as {
+        next_available_at?: unknown;
+        notification_sent?: unknown;
+      };
+      const nextAvailableAt = typeof result.next_available_at === 'string' ? result.next_available_at : null;
+      const nextAvailableLabel = formatAssessmentDate(nextAvailableAt);
+      setAvailability({ available: false, nextAvailableAt });
+      setSuccess(
+        nextAvailableLabel
+          ? `Assessment submitted successfully. You can answer again on ${nextAvailableLabel}.`
+          : 'Assessment submitted successfully. Your next assessment will be available after the assessment cooldown.',
+      );
+      if (result.notification_sent === false) {
+        setError('Your assessment was saved, but we could not send the confirmation email.');
+      }
     } catch (err: unknown) {
       setError(requestErrorMessage(err, 'Unable to submit assessment. Please try again later.'));
     } finally {
@@ -201,13 +222,13 @@ export default function AssessmentFormPage() {
               <Button type="button" variant="light" color="red" size="xs" mt="xs" onClick={retryPersonalDetails}>Retry</Button>
             </Alert>
           )}
-          {pendingDetails && detailsStatus === 'ready' && (
+          {pendingDetails && detailsStatus === 'ready' && !success && (
             <Alert icon={<IconCircleCheck size={16} />} color="green" variant="light" role="status" aria-live="polite">
               Your account details have been saved.
             </Alert>
           )}
           {availabilityError && <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">{availabilityError}</Alert>}
-          {availability && !availability.available && (
+          {availability && !availability.available && !success && (
             <Alert icon={<IconCircleCheck size={16} />} color="blue" variant="light">
               Your assessment was received. You can answer again on {nextAssessmentLabel}.
             </Alert>

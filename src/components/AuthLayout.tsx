@@ -21,7 +21,7 @@ export default function AuthLayout({ children, wide = false }: { children: React
         </section>
         <Card className="auth-card" p={{ base: 'lg', sm: 36 }} radius="lg">{children}</Card>
       </main>
-      <footer className="auth-footer"><Text size="xs" c="dimmed">PUP Santa Rosa Branch · iMHealth</Text></footer>
+      <footer className="auth-footer"><Text size="xs" c="dimmed">PUP Santa Rosa Campus · iMHealth</Text></footer>
     </div>
   );
 }
