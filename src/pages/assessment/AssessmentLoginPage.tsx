@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Title,
   Text,
-  TextInput,
-  PasswordInput,
-  Button,
   Stack,
-  Alert,
   Anchor,
 } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
 import AuthLayout from '../../components/AuthLayout';
+import { FormAlert, FormButton, PasswordField, TextField } from '../../components/forms';
 import { useAuth } from '../../context/AuthContext';
 
 type AuthError = Error & { code?: string };
@@ -19,7 +16,9 @@ type AuthError = Error & { code?: string };
 export default function AssessmentLoginPage() {
   const { signInStudent, completeNewPassword, hasPendingNewPassword } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const verification = location.state as { email?: string; verified?: boolean } | null;
+  const [email, setEmail] = useState(verification?.email ?? '');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -41,6 +40,10 @@ export default function AssessmentLoginPage() {
       if (authError.code === 'NEW_PASSWORD_REQUIRED' || authError.message === 'NEW_PASSWORD_REQUIRED') {
         setNeedsNewPassword(true);
         setError('');
+        return;
+      }
+      if (authError.code === 'UserNotConfirmedException') {
+        navigate('/assessment/verify', { state: { email } });
         return;
       }
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -80,22 +83,28 @@ export default function AssessmentLoginPage() {
             </Text>
           </div>
 
+          {verification?.verified && !showNewPasswordForm && (
+            <FormAlert color="green" variant="light">
+              Email verified. Sign in to finish saving your student account details.
+            </FormAlert>
+          )}
+
           {error && (
-            <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+            <FormAlert icon={<IconAlertCircle size={16} />} color="red" variant="light">
               {error}
-            </Alert>
+            </FormAlert>
           )}
 
           {showNewPasswordForm && !error && (
-            <Alert icon={<IconAlertCircle size={16} />} color="blue" variant="light">
+            <FormAlert icon={<IconAlertCircle size={16} />} color="blue" variant="light">
               This is a first-login account. Please set a new password to continue.
-            </Alert>
+            </FormAlert>
           )}
 
           {!showNewPasswordForm ? (
             <form onSubmit={handleSubmit}>
               <Stack>
-                <TextInput
+                <TextField
                   label="Email"
                   type="email"
                   autoComplete="username"
@@ -104,39 +113,39 @@ export default function AssessmentLoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <PasswordInput
+                <PasswordField
                   label="Password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <Button type="submit" loading={loading} fullWidth>
+                <FormButton type="submit" loading={loading} fullWidth>
                   Sign In
-                </Button>
+                </FormButton>
               </Stack>
             </form>
           ) : (
             <form onSubmit={handleNewPasswordSubmit}>
               <Stack>
-                <TextInput label="Email" value={email} disabled />
-                <PasswordInput
+              <TextField label="Email" value={email} disabled />
+                <PasswordField
                   label="New Password"
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                 />
-                <PasswordInput
+                <PasswordField
                   label="Confirm New Password"
                   autoComplete="new-password"
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
                   required
                 />
-                <Button type="submit" loading={loading} fullWidth>
+                <FormButton type="submit" loading={loading} fullWidth>
                   Save Password
-                </Button>
+                </FormButton>
               </Stack>
             </form>
           )}

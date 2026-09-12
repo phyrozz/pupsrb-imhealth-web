@@ -1,5 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import {
   Alert,
   Button,
@@ -12,6 +13,7 @@ import {
   Stack,
   Text,
   Title,
+  Loader,
 } from '@mantine/core';
 import { IconAlertCircle, IconCircleCheck, IconLogout } from '@tabler/icons-react';
 import assessmentData from '../../data/assessment_questions.json';
@@ -20,10 +22,36 @@ import ThemeToggle from '../../components/ThemeToggle';
 import { useAuth } from '../../context/AuthContext';
 
 type ResponseValue = string;
+type DetailsStatus = 'saving' | 'error' | 'ready';
+
+function requestErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError<{ message?: unknown }>(error)) {
+    const message = error.response?.data?.message;
+    return typeof message === 'string' && message.trim() ? message : fallback;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
+function parsePendingDetails(raw: string, email: string) {
+  let details: Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+    details = parsed as Record<string, unknown>;
+  } catch {
+    throw new Error('Your saved signup details could not be read. Please contact an administrator to complete your account.');
+  }
+  if (typeof details.email !== 'string' || details.email.trim().toLowerCase() !== email.trim().toLowerCase()) {
+    throw new Error('These saved signup details belong to a different email address. Sign out and sign in with the email you used to register. Your information has been kept.');
+  }
+  return details;
+}
 
 export default function AssessmentFormPage() {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, session, isLoading: authLoading } = useAuth();
+  const authenticatedEmail: unknown = session?.getIdToken().payload.email;
+  const accountEmail = typeof authenticatedEmail === 'string' ? authenticatedEmail.trim() : '';
   const questions = assessmentData.questions;
   const responses = assessmentData.responses;
 
@@ -33,13 +61,51 @@ export default function AssessmentFormPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingDetails] = useState(() => sessionStorage.getItem('pendingPersonalDetails'));
+  const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>(pendingDetails ? 'saving' : 'ready');
+  const [detailsAttempt, setDetailsAttempt] = useState(0);
+  const [detailsError, setDetailsError] = useState('');
+  const detailsRequestRef = useRef<{ email: string; promise: Promise<void> } | null>(null);
 
   useEffect(() => {
-    const pending = sessionStorage.getItem('pendingPersonalDetails');
-    if (!pending) return;
-    sessionStorage.removeItem('pendingPersonalDetails');
-    createPersonalDetails(JSON.parse(pending)).catch(console.error);
-  }, []);
+    if (!pendingDetails || authLoading) return;
+    let active = true;
+
+    // Reuse the same request when StrictMode replays this effect.
+    if (!detailsRequestRef.current || detailsRequestRef.current.email !== accountEmail) {
+      const promise = Promise.resolve()
+        .then(() => {
+          if (!accountEmail) throw new Error('We could not verify your signed-in email. Please sign out and sign in again before saving your account details.');
+          return createPersonalDetails(parsePendingDetails(pendingDetails, accountEmail));
+        })
+        .then(() => {
+          // A later signup must not have its pending details removed by this request.
+          if (sessionStorage.getItem('pendingPersonalDetails') === pendingDetails) {
+            sessionStorage.removeItem('pendingPersonalDetails');
+          }
+        });
+      detailsRequestRef.current = { email: accountEmail, promise };
+    }
+
+    detailsRequestRef.current.promise.then(
+      () => { if (active) setDetailsStatus('ready'); },
+      (requestError: unknown) => {
+        if (active) {
+          setDetailsError(requestErrorMessage(requestError, 'We could not save your account details. Please retry before submitting your assessment.'));
+          setDetailsStatus('error');
+        }
+      },
+    );
+
+    return () => { active = false; };
+  }, [pendingDetails, detailsAttempt, accountEmail, authLoading]);
+
+  const retryPersonalDetails = () => {
+    detailsRequestRef.current = null;
+    setDetailsError('');
+    setDetailsStatus('saving');
+    setDetailsAttempt((attempt) => attempt + 1);
+  };
 
   const allAnswered = answers.every(Boolean);
 
@@ -47,6 +113,10 @@ export default function AssessmentFormPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    if (detailsStatus !== 'ready') {
+      setError('Please wait for your account details to be saved before submitting. If saving failed, select Retry.');
+      return;
+    }
     if (!allAnswered) { setError('Please answer all questions before submitting.'); return; }
     setLoading(true);
     try {
@@ -54,7 +124,7 @@ export default function AssessmentFormPage() {
       setSuccess('Assessment submitted successfully.');
       setTimeout(() => { signOut(); navigate('/assessment/login'); }, 1200);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to submit assessment');
+      setError(requestErrorMessage(err, 'Unable to submit assessment. Please try again later.'));
     } finally {
       setLoading(false);
     }
@@ -96,6 +166,22 @@ export default function AssessmentFormPage() {
 
           {error && <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">{error}</Alert>}
           {success && <Alert icon={<IconCircleCheck size={16} />} color="green" variant="light">{success}</Alert>}
+          {detailsStatus === 'saving' && (
+            <Alert color="blue" variant="light" icon={<Loader size="sm" aria-hidden="true" />} role="status" aria-live="polite">
+              Saving your account details. You can answer the questions while we finish.
+            </Alert>
+          )}
+          {detailsStatus === 'error' && (
+            <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light" role="alert">
+              <Text size="sm">{detailsError} Your information is kept for another attempt.</Text>
+              <Button type="button" variant="light" color="red" size="xs" mt="xs" onClick={retryPersonalDetails}>Retry</Button>
+            </Alert>
+          )}
+          {pendingDetails && detailsStatus === 'ready' && (
+            <Alert icon={<IconCircleCheck size={16} />} color="green" variant="light" role="status" aria-live="polite">
+              Your account details have been saved.
+            </Alert>
+          )}
         </Stack>
 
         {/* Scrollable questions */}
@@ -129,7 +215,7 @@ export default function AssessmentFormPage() {
           <Progress value={answers.filter(Boolean).length / questions.length * 100} mt="md" size="sm" aria-label="Assessment completion" />
           <Group justify="space-between" mt="md">
             <Text size="sm" c="dimmed">{answers.filter(Boolean).length} of {questions.length} answered</Text>
-            <Button type="submit" loading={loading} disabled={!allAnswered}>Submit Assessment</Button>
+            <Button type="submit" loading={loading} disabled={!allAnswered || detailsStatus !== 'ready'}>Submit Assessment</Button>
           </Group>
         </form>
 

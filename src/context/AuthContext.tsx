@@ -18,6 +18,13 @@ const studentPoolData = {
 
 const userPool = new CognitoUserPool(poolData);
 const studentUserPool = new CognitoUserPool(studentPoolData);
+const ACTIVE_ID_TOKEN_KEY = 'imhealth.activeIdToken';
+const ACTIVE_POOL_KEY = 'imhealth.activePool';
+
+function setActiveSession(pool: 'admin' | 'student', session: CognitoUserSession) {
+  sessionStorage.setItem(ACTIVE_POOL_KEY, pool);
+  sessionStorage.setItem(ACTIVE_ID_TOKEN_KEY, session.getIdToken().getJwtToken());
+}
 
 interface AuthContextValue {
   user: CognitoUser | null;
@@ -58,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(cognitoUser);
           setSession(sess);
           setIdToken(sess.getIdToken().getJwtToken());
+          setActiveSession(pool === studentUserPool ? 'student' : 'admin', sess);
           setIsLoading(false);
         });
         return;
@@ -79,10 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(cognitoUser);
           setSession(sess);
           setIdToken(sess.getIdToken().getJwtToken());
+          setActiveSession('admin', sess);
           resolve(sess);
         },
         newPasswordRequired(userAttributes, requiredAttributes) {
           setPendingNewPasswordUser(cognitoUser);
+          sessionStorage.setItem(ACTIVE_POOL_KEY, 'admin');
           reject(
             Object.assign(
               new Error('NEW_PASSWORD_REQUIRED'),
@@ -119,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(pendingNewPasswordUser);
             setSession(sess);
             setIdToken(sess.getIdToken().getJwtToken());
+            setActiveSession(sessionStorage.getItem(ACTIVE_POOL_KEY) === 'student' ? 'student' : 'admin', sess);
             setPendingNewPasswordUser(null);
             resolve(sess);
           },
@@ -139,10 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(cognitoUser);
           setSession(sess);
           setIdToken(sess.getIdToken().getJwtToken());
+          setActiveSession('student', sess);
           resolve(sess);
         },
         newPasswordRequired(userAttributes, requiredAttributes) {
           setPendingNewPasswordUser(cognitoUser);
+          sessionStorage.setItem(ACTIVE_POOL_KEY, 'student');
           reject(Object.assign(new Error('NEW_PASSWORD_REQUIRED'), { code: 'NEW_PASSWORD_REQUIRED', userAttributes, requiredAttributes }));
         },
         onFailure: reject,
@@ -155,6 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSession(null);
     setIdToken(null);
+    sessionStorage.removeItem(ACTIVE_ID_TOKEN_KEY);
+    sessionStorage.removeItem(ACTIVE_POOL_KEY);
     setPendingNewPasswordUser(null);
   };
 

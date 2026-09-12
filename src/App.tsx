@@ -15,6 +15,7 @@ import MyAccountPage from './pages/MyAccountPage';
 // Student-facing pages
 import AssessmentLoginPage from './pages/assessment/AssessmentLoginPage';
 import AssessmentSignUpPage from './pages/assessment/AssessmentSignUpPage';
+import AssessmentVerifyPage from './pages/assessment/AssessmentVerifyPage';
 import AssessmentFormPage from './pages/assessment/AssessmentFormPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/assessment/login" element={<AssessmentLoginPage />} />
       <Route path="/assessment/sign-up" element={<AssessmentSignUpPage />} />
+      <Route path="/assessment/verify" element={<AssessmentVerifyPage />} />
       <Route path="/assessment/form" element={<RequireStudentAuth><AssessmentFormPage /></RequireStudentAuth>} />
 
       {/* Admin (protected) */}

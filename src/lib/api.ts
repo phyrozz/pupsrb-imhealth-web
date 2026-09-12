@@ -8,14 +8,43 @@ const api = axios.create({
 // Attach Cognito ID token to every request
 api.interceptors.request.use((config) => {
   // Dynamically import to avoid circular deps — token is stored in localStorage by Cognito SDK
-  const keys = Object.keys(localStorage).filter((k) => k.endsWith('.idToken'));
-  if (keys.length > 0) {
-    config.headers.Authorization = localStorage.getItem(keys[0]) ?? '';
+  const activeToken = sessionStorage.getItem('imhealth.activeIdToken');
+  const fallbackTokenKey = Object.keys(localStorage).find((key) => key.endsWith('.idToken'));
+  const token = activeToken ?? (fallbackTokenKey ? localStorage.getItem(fallbackTokenKey) : null);
+  if (token) {
+    config.headers.Authorization = token;
   }
   return config;
 });
 
 export default api;
+
+export interface Program {
+  id: number;
+  initial: string;
+  name: string;
+}
+
+export interface ProgramsPage {
+  items: Program[];
+  page: number;
+  page_size: number;
+  total: number;
+  has_more: boolean;
+}
+
+export interface GetProgramsOptions {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  signal?: AbortSignal;
+}
+
+export const getPrograms = ({ q = '', page = 1, pageSize = 25, signal }: GetProgramsOptions = {}) =>
+  api.get<ProgramsPage>('/programs', {
+    params: { q, page, page_size: pageSize },
+    signal,
+  });
 
 // ── Students ──────────────────────────────────────────────────────────────────
 export const getStudents = (params: {
