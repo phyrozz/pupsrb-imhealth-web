@@ -70,6 +70,7 @@ export const listAssessments = (params: {
   page?: string | number;
 }) => api.get('/assessments', { params });
 export const submitAssessment = (data: unknown) => api.post('/assessments', data);
+export const getAssessmentAvailability = () => api.get<{ available: boolean; next_available_at: string | null }>('/assessments/availability');
 export const getAprioriResult = (assessmentId: string) => api.get(`/assessments/${assessmentId}/apriori`);
 export const updateCounselingStatus = (assessmentId: string, data: unknown) =>
   api.put(`/assessments/${assessmentId}/counseling-status`, data);

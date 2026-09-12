@@ -17,7 +17,7 @@ import {
 } from '@mantine/core';
 import { IconAlertCircle, IconCircleCheck, IconLogout } from '@tabler/icons-react';
 import assessmentData from '../../data/assessment_questions.json';
-import { submitAssessment, createPersonalDetails } from '../../lib/api';
+import { submitAssessment, createPersonalDetails, getAssessmentAvailability } from '../../lib/api';
 import ThemeToggle from '../../components/ThemeToggle';
 import { useAuth } from '../../context/AuthContext';
 
@@ -65,6 +65,8 @@ export default function AssessmentFormPage() {
   const [detailsStatus, setDetailsStatus] = useState<DetailsStatus>(pendingDetails ? 'saving' : 'ready');
   const [detailsAttempt, setDetailsAttempt] = useState(0);
   const [detailsError, setDetailsError] = useState('');
+  const [availability, setAvailability] = useState<{ available: boolean; nextAvailableAt: string | null } | null>(null);
+  const [availabilityError, setAvailabilityError] = useState('');
   const detailsRequestRef = useRef<{ email: string; promise: Promise<void> } | null>(null);
 
   useEffect(() => {
@@ -107,6 +109,24 @@ export default function AssessmentFormPage() {
     setDetailsAttempt((attempt) => attempt + 1);
   };
 
+  useEffect(() => {
+    if (detailsStatus !== 'ready') return;
+    let active = true;
+    getAssessmentAvailability().then(
+      ({ data }) => {
+        if (active) setAvailability({ available: data.available, nextAvailableAt: data.next_available_at });
+      },
+      (requestError: unknown) => {
+        if (active) setAvailabilityError(requestErrorMessage(requestError, 'We could not check when your next assessment is available.'));
+      },
+    );
+    return () => { active = false; };
+  }, [detailsStatus]);
+
+  const nextAssessmentLabel = availability?.nextAvailableAt
+    ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(new Date(availability.nextAvailableAt))
+    : null;
+
   const allAnswered = answers.every(Boolean);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -115,6 +135,10 @@ export default function AssessmentFormPage() {
     setSuccess('');
     if (detailsStatus !== 'ready') {
       setError('Please wait for your account details to be saved before submitting. If saving failed, select Retry.');
+      return;
+    }
+    if (!availability || !availability.available) {
+      setError(availabilityError || `Your next assessment is available on ${nextAssessmentLabel ?? 'the scheduled date'}.`);
       return;
     }
     if (!allAnswered) { setError('Please answer all questions before submitting.'); return; }
@@ -182,6 +206,12 @@ export default function AssessmentFormPage() {
               Your account details have been saved.
             </Alert>
           )}
+          {availabilityError && <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">{availabilityError}</Alert>}
+          {availability && !availability.available && (
+            <Alert icon={<IconCircleCheck size={16} />} color="blue" variant="light">
+              Your assessment was received. You can answer again on {nextAssessmentLabel}.
+            </Alert>
+          )}
         </Stack>
 
         {/* Scrollable questions */}
@@ -215,7 +245,7 @@ export default function AssessmentFormPage() {
           <Progress value={answers.filter(Boolean).length / questions.length * 100} mt="md" size="sm" aria-label="Assessment completion" />
           <Group justify="space-between" mt="md">
             <Text size="sm" c="dimmed">{answers.filter(Boolean).length} of {questions.length} answered</Text>
-            <Button type="submit" loading={loading} disabled={!allAnswered || detailsStatus !== 'ready'}>Submit Assessment</Button>
+            <Button type="submit" loading={loading} disabled={!allAnswered || detailsStatus !== 'ready' || availability?.available !== true}>Submit Assessment</Button>
           </Group>
         </form>
 
