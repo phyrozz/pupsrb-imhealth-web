@@ -47,18 +47,21 @@ export const getPrograms = ({ q = '', page = 1, pageSize = 25, signal }: GetProg
   });
 
 // ── Students ──────────────────────────────────────────────────────────────────
-export const getStudents = (params: {
+export interface GetStudentsOptions {
   search?: string;
   result_count?: string;
   program?: string;
   page_size?: string | number;
   page?: string | number;
-}) => api.get('/students', { params });
+  signal?: AbortSignal;
+}
+
+export const getStudents = ({ signal, ...params }: GetStudentsOptions) =>
+  api.get('/students', { params, signal });
 export const getStudent = (userId: string) => api.get(`/students/${userId}`);
 export const createPersonalDetails = (data: unknown) => api.post('/students/personal-details', data);
 export const updatePersonalDetails = (data: unknown) => api.put('/students/personal-details', data);
-export const importStudentsCsv = (formData: FormData) =>
-  api.post('/students/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+export const importStudentsCsv = (data: { csv: string }) => api.post('/students/import', data);
 
 // ── Assessments ───────────────────────────────────────────────────────────────
 export const listAssessments = (params: {

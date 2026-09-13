@@ -19,16 +19,16 @@ import AssessmentVerifyPage from './pages/assessment/AssessmentVerifyPage';
 import AssessmentFormPage from './pages/assessment/AssessmentFormPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, activePool, isLoading } = useAuth();
   if (isLoading) return <LoadingOverlay visible />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user || activePool !== 'admin') return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function RequireStudentAuth({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, activePool, isLoading } = useAuth();
   if (isLoading) return <LoadingOverlay visible />;
-  if (!user) return <Navigate to="/assessment/login" replace />;
+  if (!user || activePool !== 'student') return <Navigate to="/assessment/login" replace />;
   return <>{children}</>;
 }
 

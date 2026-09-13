@@ -20,8 +20,9 @@ const userPool = new CognitoUserPool(poolData);
 const studentUserPool = new CognitoUserPool(studentPoolData);
 const ACTIVE_ID_TOKEN_KEY = 'imhealth.activeIdToken';
 const ACTIVE_POOL_KEY = 'imhealth.activePool';
+type ActivePool = 'admin' | 'student';
 
-function setActiveSession(pool: 'admin' | 'student', session: CognitoUserSession) {
+function setActiveSession(pool: ActivePool, session: CognitoUserSession) {
   sessionStorage.setItem(ACTIVE_POOL_KEY, pool);
   sessionStorage.setItem(ACTIVE_ID_TOKEN_KEY, session.getIdToken().getJwtToken());
 }
@@ -30,6 +31,7 @@ interface AuthContextValue {
   user: CognitoUser | null;
   session: CognitoUserSession | null;
   idToken: string | null;
+  activePool: ActivePool | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<CognitoUserSession>;
   signInStudent: (email: string, password: string) => Promise<CognitoUserSession>;
@@ -46,32 +48,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CognitoUser | null>(null);
   const [session, setSession] = useState<CognitoUserSession | null>(null);
   const [idToken, setIdToken] = useState<string | null>(null);
+  const [activePool, setActivePool] = useState<ActivePool | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingNewPasswordUser, setPendingNewPasswordUser] = useState<CognitoUser | null>(null);
 
   const refreshSession = useCallback(() => {
-    // Check admin pool first, then student pool
-    const pools = [userPool, studentUserPool];
-    let found = false;
-    for (const pool of pools) {
-      const cognitoUser = pool.getCurrentUser();
-      if (cognitoUser) {
-        cognitoUser.getSession((err: Error | null, sess: CognitoUserSession | null) => {
-          if (err || !sess?.isValid()) {
-            if (!found) setIsLoading(false);
-            return;
-          }
-          found = true;
-          setUser(cognitoUser);
-          setSession(sess);
-          setIdToken(sess.getIdToken().getJwtToken());
-          setActiveSession(pool === studentUserPool ? 'student' : 'admin', sess);
-          setIsLoading(false);
-        });
+    const savedPool = sessionStorage.getItem(ACTIVE_POOL_KEY);
+    const pools: Array<[ActivePool, CognitoUserPool]> = savedPool === 'student'
+      ? [['student', studentUserPool], ['admin', userPool]]
+      : [['admin', userPool], ['student', studentUserPool]];
+
+    const restoreFromPool = (index: number) => {
+      if (index >= pools.length) {
+        setUser(null);
+        setSession(null);
+        setIdToken(null);
+        setActivePool(null);
+        sessionStorage.removeItem(ACTIVE_ID_TOKEN_KEY);
+        sessionStorage.removeItem(ACTIVE_POOL_KEY);
+        setIsLoading(false);
         return;
       }
-    }
-    setIsLoading(false);
+
+      const [poolType, pool] = pools[index];
+      const cognitoUser = pool.getCurrentUser();
+      if (!cognitoUser) {
+        restoreFromPool(index + 1);
+        return;
+      }
+
+      cognitoUser.getSession((err: Error | null, sess: CognitoUserSession | null) => {
+        if (err || !sess?.isValid()) {
+          restoreFromPool(index + 1);
+          return;
+        }
+        setUser(cognitoUser);
+        setSession(sess);
+        setIdToken(sess.getIdToken().getJwtToken());
+        setActivePool(poolType);
+        setActiveSession(poolType, sess);
+        setIsLoading(false);
+      });
+    };
+
+    restoreFromPool(0);
   }, []);
 
   useEffect(() => {
@@ -87,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(cognitoUser);
           setSession(sess);
           setIdToken(sess.getIdToken().getJwtToken());
+          setActivePool('admin');
           setActiveSession('admin', sess);
           resolve(sess);
         },
@@ -129,7 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(pendingNewPasswordUser);
             setSession(sess);
             setIdToken(sess.getIdToken().getJwtToken());
-            setActiveSession(sessionStorage.getItem(ACTIVE_POOL_KEY) === 'student' ? 'student' : 'admin', sess);
+            const poolType = sessionStorage.getItem(ACTIVE_POOL_KEY) === 'student' ? 'student' : 'admin';
+            setActivePool(poolType);
+            setActiveSession(poolType, sess);
             setPendingNewPasswordUser(null);
             resolve(sess);
           },
@@ -150,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(cognitoUser);
           setSession(sess);
           setIdToken(sess.getIdToken().getJwtToken());
+          setActivePool('student');
           setActiveSession('student', sess);
           resolve(sess);
         },
@@ -168,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSession(null);
     setIdToken(null);
+    setActivePool(null);
     sessionStorage.removeItem(ACTIVE_ID_TOKEN_KEY);
     sessionStorage.removeItem(ACTIVE_POOL_KEY);
     setPendingNewPasswordUser(null);
@@ -179,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         idToken,
+        activePool,
         isLoading,
         signIn,
         signInStudent,
