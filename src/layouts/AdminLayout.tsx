@@ -20,7 +20,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const email = session?.getIdToken().payload.email ?? '';
-  const activeItem = navItems.find((item) => pathname.startsWith(item.href));
+  const isReportRoute = pathname.startsWith('/generate-report');
 
   return (
     <AppShell header={{ height: 80 }} navbar={{ width: 268, breakpoint: 'sm', collapsed: { mobile: !opened } }} padding="lg">
@@ -42,17 +42,23 @@ export default function AdminLayout() {
         <AppShell.Section grow component={ScrollArea}>
           <Text size="xs" c="dimmed" fw={700} className="sidebar-caption">WORKSPACE</Text>
           <nav aria-label="Main navigation">
-            {navItems.map((item) => (
-              <NavLink component={Link} to={item.href} key={item.href} label={item.label} leftSection={<item.icon size={21} stroke={1.7} />}
-                active={activeItem?.href === item.href} aria-current={activeItem?.href === item.href ? 'page' : undefined}
-                onClick={close} />
-            ))}
-            {pathname.startsWith('/generate-report') && (
-              <Stack gap={0} pl="xl">
+            {navItems.map((item) => {
+              const isReportItem = item.href === '/generate-report';
+              const isActive = pathname === item.href;
+              return (
+                <div key={item.href}>
+                  <NavLink component={Link} to={item.href} label={item.label} leftSection={<item.icon size={21} stroke={1.7} />}
+                    active={isActive} aria-current={isActive ? 'page' : undefined}
+                    onClick={close} />
+                  {isReportItem && isReportRoute && (
+                    <Stack gap={0} className="report-subnav">
                 <NavLink component={Link} to="/generate-report/by-program" label="By Program" active={pathname === '/generate-report/by-program'} onClick={close} />
                 <NavLink component={Link} to="/generate-report/by-student" label="By Student" active={pathname === '/generate-report/by-student'} onClick={close} />
-              </Stack>
-            )}
+                    </Stack>
+                  )}
+                </div>
+              );
+            })}
           </nav>
         </AppShell.Section>
         <AppShell.Section className="sidebar-footer">

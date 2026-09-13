@@ -42,6 +42,8 @@ button, input, textarea { font: inherit; }
 .app-content { max-width: 1440px; margin: 0 auto; padding: 12px; min-width: 0; }
 .app-content > .mantine-Title-root:first-child { margin-top: 8px; }
 .sidebar-caption { margin: 16px 12px; letter-spacing: 0.12em; }
+.report-subnav { margin: -2px 0 8px 32px; padding-left: 10px; border-left: 1px solid var(--app-border); }
+.report-subnav .mantine-NavLink-root { margin-bottom: 2px; padding: 9px 10px; }
 .sidebar-footer { border-top: 1px solid var(--app-border); padding-top: 18px; }
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 1000; padding: 10px 16px; background: var(--app-surface); color: var(--app-accent); border-radius: 8px; }
 .skip-link:focus { top: 12px; }
