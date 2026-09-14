@@ -77,7 +77,7 @@ export default function AssessmentLoginPage() {
         <Stack gap="lg">
           <div>
             <Text className="eyebrow" mb="xs">STUDENT PORTAL</Text>
-            <Title order={2}>{showNewPasswordForm ? 'Set new password' : 'Welcome back'}</Title>
+            <Title order={2}>{showNewPasswordForm ? 'Set new password' : 'Welcome'}</Title>
             <Text c="dimmed" size="sm">
               {showNewPasswordForm ? 'Complete your first login' : 'Sign in to your student account to continue.'}
             </Text>
