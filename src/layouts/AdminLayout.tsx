@@ -3,18 +3,21 @@ import { AppShell, Avatar, Burger, Group, Text, NavLink, Button, ScrollArea, Sta
 import { useDisclosure } from '@mantine/hooks';
 import { IconLayoutDashboard, IconUsers, IconClipboardList, IconFileReport, IconUser, IconLogout } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import Brand from '../components/Brand';
 import ThemeToggle from '../components/ThemeToggle';
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard },
-  { label: 'Students', href: '/students', icon: IconUsers },
-  { label: 'Assessments', href: '/student-assessments', icon: IconClipboardList },
-  { label: 'Generate Report', href: '/generate-report', icon: IconFileReport },
-  { label: 'My Account', href: '/my-account', icon: IconUser },
+  { label: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard, module: 'dashboard' },
+  { label: 'Students', href: '/students', icon: IconUsers, module: 'students' },
+  { label: 'Assessments', href: '/student-assessments', icon: IconClipboardList, module: 'assessments' },
+  { label: 'Generate Report', href: '/generate-report', icon: IconFileReport, module: 'reports' },
+  { label: 'Role Permissions', href: '/role-permissions', icon: IconUsers, module: 'permissions' },
+  { label: 'My Account', href: '/my-account', icon: IconUser, module: '' },
 ];
 
 export default function AdminLayout() {
+  const { can, data: permissions } = usePermissions();
   const [opened, { toggle, close }] = useDisclosure();
   const { signOut, session } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +45,7 @@ export default function AdminLayout() {
         <AppShell.Section grow component={ScrollArea}>
           <Text size="xs" c="dimmed" fw={700} className="sidebar-caption">WORKSPACE</Text>
           <nav aria-label="Main navigation">
-            {navItems.map((item) => {
+            {navItems.filter((item) => (!item.module || can(item.module)) && (item.module !== 'permissions' || permissions.role_name === 'su_admin')).map((item) => {
               const isReportItem = item.href === '/generate-report';
               const isActive = pathname === item.href;
               return (
@@ -52,8 +55,8 @@ export default function AdminLayout() {
                     onClick={close} />
                   {isReportItem && isReportRoute && (
                     <Stack gap={0} className="report-subnav">
-                <NavLink component={Link} to="/generate-report/by-program" label="By Program" active={pathname === '/generate-report/by-program'} onClick={close} />
-                <NavLink component={Link} to="/generate-report/by-student" label="By Student" active={pathname === '/generate-report/by-student'} onClick={close} />
+                {can('assessments') && <NavLink component={Link} to="/generate-report/by-program" label="By Program" active={pathname === '/generate-report/by-program'} onClick={close} />}
+                {can('assessments') && can('students') && <NavLink component={Link} to="/generate-report/by-student" label="By Student" active={pathname === '/generate-report/by-student'} onClick={close} />}
                     </Stack>
                   )}
                 </div>

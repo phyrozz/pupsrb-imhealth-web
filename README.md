@@ -71,3 +71,12 @@ export default defineConfig([
   },
 ])
 ```
+
+
+## Administrator role permissions
+
+The admin layout fetches `GET /admin/permissions/me` before mounting module pages and fails closed if permissions cannot be verified. Navigation, routes and action controls reflect the authenticated database role; the API independently enforces grants. Only `su_admin` may open Role Permissions and replace a role's grants using `PUT /admin/permissions/roles/{role_id}`. Super administrator access is immutable, and permission management cannot be granted to other roles. The matrix is reloaded after saving.
+
+Student CSV import requires Students Read, Insert and Upload. Counseling changes and their follow-up email require Assessments Read and Update. Student history requires Assessments Read; its trend chart additionally requires Dashboard Read. Report builders require Reports Read and Assessments Read; the student builder additionally requires Students Read. Reports Download controls local PDF generation; read permission still permits access to the underlying data already authorized by the API. Browser download controls cannot prevent an authorized reader from copying data.
+
+The corresponding manual SQL patch, `pupsrb-imhealth-api/sql/20260914_01_admin_module_permissions.sql`, must be applied by the user before these endpoints can serve role grants. These changes do not affect student assessment authentication or submission.

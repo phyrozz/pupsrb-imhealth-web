@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Title, SimpleGrid, Card, Text, Button, Group } from '@mantine/core';
+import { usePermissions } from '../context/PermissionsContext';
 import { IconArrowRight, IconFileReport } from '@tabler/icons-react';
 
 export default function GenerateReportPage() {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   return (
@@ -18,7 +20,7 @@ export default function GenerateReportPage() {
             Generate a report by program such as BSIT or BSECE and export it as .pdf or .csv
           </Text>
           <Group justify="flex-end" mt="md">
-            <Button rightSection={<IconArrowRight size={16} />} onClick={() => navigate('/generate-report/by-program')}>
+            <Button disabled={!can('assessments')} rightSection={<IconArrowRight size={16} />} onClick={() => navigate('/generate-report/by-program')}>
               Open report builder
             </Button>
           </Group>
@@ -33,7 +35,7 @@ export default function GenerateReportPage() {
             Generate a report by individual student and export it as .pdf or .csv
           </Text>
           <Group justify="flex-end" mt="md">
-            <Button rightSection={<IconArrowRight size={16} />} onClick={() => navigate('/generate-report/by-student')}>
+            <Button disabled={!can('students') || !can('assessments')} rightSection={<IconArrowRight size={16} />} onClick={() => navigate('/generate-report/by-student')}>
               Open report builder
             </Button>
           </Group>

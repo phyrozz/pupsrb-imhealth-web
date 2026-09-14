@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  Alert,
   Card,
   Avatar,
   Divider,
@@ -20,6 +21,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconX, IconEdit, IconDeviceFloppy } from '@tabler/icons-react';
 import { listAssessments, updateCounselingStatus, sendStatusEmail } from '../lib/api';
+import { usePermissions } from '../context/PermissionsContext';
 import AssessmentResponsesModal from './AssessmentResponsesModal';
 import useChartTheme from './dashboard/useChartTheme';
 import ReactApexChart from 'react-apexcharts';
@@ -55,6 +57,11 @@ export default function StudentHistorySidebar({
   user: Student;
   onClose: () => void;
 }) {
+  const { can } = usePermissions();
+  const canReadHistory = can('assessments');
+  const canReadTrend = canReadHistory && can('dashboard');
+  const canUpdate = canReadHistory && can('assessments', 'update');
+  const [error, setError] = useState('');
   const chartTheme = useChartTheme();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,25 +73,27 @@ export default function StudentHistorySidebar({
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const [assmRes, trendRes] = await Promise.all([
-        listAssessments({ user_id: user.user_id }),
-        getStudentTrend(user.user_id),
+        canReadHistory ? listAssessments({ user_id: user.user_id }) : Promise.resolve({ data: [] }),
+        canReadTrend ? getStudentTrend(user.user_id) : Promise.resolve({ data: [] }),
       ]);
       setAssessments(assmRes.data ?? []);
       setTrendData(trendRes.data ?? []);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setError('Assessment history could not be loaded.');
     } finally {
       setLoading(false);
     }
-  }, [user.user_id]);
+  }, [user.user_id, canReadHistory, canReadTrend]);
 
   useEffect(() => {
     void Promise.resolve().then(loadData);
   }, [loadData]);
 
   const handleSave = async () => {
+    if (!canUpdate) return;
     try {
       for (const [id, statusId] of Object.entries(tempChanges)) {
         await updateCounselingStatus(id, { counseling_status_id: statusId });
@@ -171,21 +180,24 @@ export default function StudentHistorySidebar({
             <Group justify="space-between" mt="md" mb="xs">
               <Title order={5}>Assessment History</Title>
               <Group gap="xs">
-                {isEditMode && (
+                {canUpdate && isEditMode && (
                   <Button size="xs" leftSection={<IconDeviceFloppy size={14} />} onClick={handleSave}>
                     Save
                   </Button>
                 )}
-                <ActionIcon
+                {canUpdate && <ActionIcon
+                  aria-label="Edit counseling statuses"
                   variant={isEditMode ? 'filled' : 'subtle'}
                   color="blue"
                   onClick={() => setIsEditMode((v) => !v)}
                 >
                   <IconEdit size={16} />
-                </ActionIcon>
+                </ActionIcon>}
               </Group>
             </Group>
 
+            {error && <Alert color="red">{error}<Button variant="light" onClick={() => void loadData()}>Retry</Button></Alert>}
+            {!canReadHistory && <Text size="sm" c="dimmed">Your role does not have access to assessment history.</Text>}
             <Stack gap="xs">
               {assessments.map((a) => (
                 <Card key={a.id} withBorder p="sm" radius="sm">
@@ -204,7 +216,7 @@ export default function StudentHistorySidebar({
                         {a.result_scenario}
                       </Badge>
                     </div>
-                    {isEditMode ? (
+                    {canUpdate && isEditMode ? (
                       <Select
                         size="xs"
                         w={160}

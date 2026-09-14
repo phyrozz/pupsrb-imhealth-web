@@ -13,6 +13,7 @@ import {
 import { DatePickerInput } from '@mantine/dates';
 import { IconDownload, IconSearch } from '@tabler/icons-react';
 import { getStudents, listAssessments } from '../lib/api';
+import { usePermissions } from '../context/PermissionsContext';
 import jsPDF from 'jspdf';
 
 const STATUSES = [
@@ -28,6 +29,8 @@ const SCENARIOS = [
 ];
 
 export default function GenerateByStudentPage() {
+  const { can } = usePermissions();
+  const canDownload = can('reports', 'download');
   const [studentSearch, setStudentSearch] = useState('');
   const [studentOptions, setStudentOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
@@ -58,6 +61,7 @@ export default function GenerateByStudentPage() {
   }, []);
 
   const handleGenerate = async () => {
+    if (!canDownload) return;
     if (!selectedUserId) { setMessage('Please select a student.'); return; }
     setLoading(true);
     setMessage('');
@@ -177,9 +181,11 @@ export default function GenerateByStudentPage() {
             onChange={(e) => setRecommendations(e.target.value)}
           />
           {message && <Text c={message.includes('Failed') ? 'red' : 'dimmed'} size="sm">{message}</Text>}
+          {!canDownload && <Text size="sm">Your role does not have permission to download reports.</Text>}
           <Group justify="flex-end">
             <Button
               leftSection={<IconDownload size={16} />}
+              disabled={!canDownload}
               onClick={handleGenerate}
               loading={loading}
             >

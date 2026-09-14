@@ -4,6 +4,7 @@ import { IconAlertCircle, IconSearch, IconUpload, IconUsers } from '@tabler/icon
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
 import { getPrograms, getStudents, importStudentsCsv } from '../lib/api';
+import { usePermissions } from '../context/PermissionsContext';
 import StudentHistorySidebar from '../components/StudentHistorySidebar';
 import AdminPageHeader from '../components/data-display/AdminPageHeader';
 import DataTableShell from '../components/data-display/DataTableShell';
@@ -31,6 +32,8 @@ function formatDate(date: string) {
 }
 
 export default function StudentsPage() {
+  const { can } = usePermissions();
+  const canImport = can('students', 'insert') && can('students', 'upload');
   const [students, setStudents] = useState<Student[]>([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -119,7 +122,7 @@ export default function StudentsPage() {
   };
 
   const handleImportCsv = async (file: File | null) => {
-    if (!file) return;
+    if (!file || !canImport) return;
     try {
       await importStudentsCsv({ csv: await file.text() });
       notifications.show({ message: 'CSV imported successfully', color: 'green' });
@@ -146,7 +149,7 @@ export default function StudentsPage() {
         title="Students"
         description="Search student records, review assessment history, and import approved student lists."
         mb="lg"
-        actions={<FileButton onChange={handleImportCsv} accept=".csv">{(props) => <Button {...props} variant="light" leftSection={<IconUpload size={17} />}>Import CSV</Button>}</FileButton>}
+        actions={canImport && <FileButton onChange={handleImportCsv} accept=".csv">{(props) => <Button {...props} variant="light" leftSection={<IconUpload size={17} />}>Import CSV</Button>}</FileButton>}
       />
 
       <form onSubmit={handleSearch}>
