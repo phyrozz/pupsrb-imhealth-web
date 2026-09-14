@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
+  Avatar,
+  Divider,
   Text,
   Title,
   Group,
@@ -12,6 +14,7 @@ import {
   Select,
   Button,
   ScrollArea,
+  SimpleGrid,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -21,21 +24,8 @@ import AssessmentResponsesModal from './AssessmentResponsesModal';
 import useChartTheme from './dashboard/useChartTheme';
 import ReactApexChart from 'react-apexcharts';
 import { getStudentTrend } from '../lib/api';
-
-interface Student {
-  user_id: string;
-  first_name: string;
-  middle_name: string;
-  last_name: string;
-  name_suffix: string;
-  student_number: string;
-  email: string;
-  birth_date: string;
-  program_initial: string;
-  year: string;
-  marital_status: string;
-  is_working_student: boolean;
-}
+import type { Student } from './students/types';
+import { displayDate, studentName } from './students/types';
 
 interface Assessment {
   id: string;
@@ -116,9 +106,7 @@ export default function StudentHistorySidebar({
     }
   };
 
-  const fullName = [user.first_name, user.middle_name, user.last_name, user.name_suffix]
-    .filter(Boolean)
-    .join(' ');
+  const fullName = studentName(user);
 
   return (
     <>
@@ -127,21 +115,29 @@ export default function StudentHistorySidebar({
         opened={modalOpened}
         onClose={closeModal}
       />
-      <Card h="100%" withBorder style={{ overflow: 'auto' }}>
+      <Card h="100%" withBorder className="student-detail-panel">
         {loading ? (
           <Stack align="center" justify="center" h={300}>
             <Loader />
           </Stack>
         ) : (
           <ScrollArea h="100%">
-            <Group justify="space-between" mb="md">
-              <Title order={4}>{fullName}</Title>
+            <Group justify="space-between" mb="md" wrap="nowrap">
+              <Group gap="sm" wrap="nowrap">
+                <Avatar color="grape" radius="xl">{user.first_name?.[0]}{user.last_name?.[0]}</Avatar>
+                <div><Title order={4}>{fullName}</Title><Text size="sm" c="dimmed">{user.student_number}</Text></div>
+              </Group>
               <ActionIcon variant="subtle" onClick={onClose} aria-label="Close student history">
                 <IconX size={16} />
               </ActionIcon>
             </Group>
 
-            <Title order={5} mb="xs">Personal Details</Title>
+            <Divider mb="md" />
+            <Title order={5} mb="xs">Student profile</Title>
+            <SimpleGrid cols={2} spacing="xs" mb="md">
+              {[["Program", user.program_initial || 'Not recorded'], ["Year level", user.year || 'Not recorded'], ["Birth date", displayDate(user.birth_date)], ["Working student", user.is_working_student ? 'Yes' : 'No']].map(([label, value]) => <div className="student-detail-item" key={label}><Text size="xs" c="dimmed">{label}</Text><Text size="sm" fw={500}>{value}</Text></div>)}
+            </SimpleGrid>
+            <Title order={5} mb="xs">Contact and personal details</Title>
             <Table withRowBorders={false} fz="sm" mb="md">
               <Table.Tbody>
                 <Table.Tr><Table.Td fw={600}>Student No.</Table.Td><Table.Td>{user.student_number}</Table.Td></Table.Tr>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Alert, Badge, Button, FileButton, Grid, Group, Pagination, Select, Table, Text, TextInput } from '@mantine/core';
+import { Alert, Badge, Button, FileButton, Group, Pagination, Select, Table, Text, TextInput } from '@mantine/core';
 import { IconAlertCircle, IconSearch, IconUpload, IconUsers } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import axios from 'axios';
@@ -8,22 +8,8 @@ import StudentHistorySidebar from '../components/StudentHistorySidebar';
 import AdminPageHeader from '../components/data-display/AdminPageHeader';
 import DataTableShell from '../components/data-display/DataTableShell';
 import DataToolbar from '../components/data-display/DataToolbar';
-
-interface Student {
-  user_id: string;
-  first_name: string;
-  middle_name: string;
-  last_name: string;
-  name_suffix: string;
-  student_number: string;
-  email: string;
-  birth_date: string;
-  program_initial: string;
-  year: string;
-  marital_status: string;
-  is_working_student: boolean;
-  total_count: number;
-}
+import ResizableSplitView from '../components/layout/ResizableSplitView';
+import type { Student } from '../components/students/types';
 
 const ROWS_OPTIONS = ['10', '20', '50', '75', '100'];
 const SESSION_OPTIONS = ['', '0', '1', '2', '3', '4', '5', '6'];
@@ -155,7 +141,7 @@ export default function StudentsPage() {
     : 'Try adjusting the name, student number, or filters and search again.';
 
   return (
-    <>
+    <div className="students-workspace">
       <AdminPageHeader
         title="Students"
         description="Search student records, review assessment history, and import approved student lists."
@@ -176,15 +162,15 @@ export default function StudentsPage() {
       {programsError && <Alert icon={<IconAlertCircle size={16} />} color="yellow" title="Program filters unavailable" mb="md">{programsError}</Alert>}
       {error && <Alert icon={<IconAlertCircle size={16} />} color="red" title="Could not load students" mb="md" withCloseButton onClose={() => setError('')}>{error}</Alert>}
 
-      <Grid gutter="md" align="stretch">
-        <Grid.Col span={{ base: 12, xl: selectedStudent ? 8 : 12 }}>
+      <ResizableSplitView detail={selectedStudent ? <StudentHistorySidebar user={selectedStudent} onClose={() => setSelectedStudent(null)} /> : undefined}>
+        <div>
           {searched && totalCount > 0 && !loading && (
             <Group justify="space-between" mb="xs">
               <Text size="sm" c="dimmed">{totalCount.toLocaleString()} student{totalCount === 1 ? '' : 's'} found</Text>
               <Text size="sm" c="dimmed">Select a row to view assessment history</Text>
             </Group>
           )}
-          <DataTableShell loading={loading} empty={!loading && (Boolean(error) || !searched || students.length === 0)} emptyIcon={<IconUsers size={24} />} emptyTitle={error ? 'Student list unavailable' : emptyTitle} emptyDescription={error ? 'Please try your search again in a moment.' : emptyDescription}>
+          <DataTableShell className="students-result-panel" loading={loading} empty={!loading && (Boolean(error) || !searched || students.length === 0)} emptyIcon={<IconUsers size={24} />} emptyTitle={error ? 'Student list unavailable' : emptyTitle} emptyDescription={error ? 'Please try your search again in a moment.' : emptyDescription}>
             <Table.ScrollContainer minWidth={950}>
               <Table striped highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
                 <Table.Thead><Table.Tr><Table.Th>Name</Table.Th><Table.Th>Student no.</Table.Th><Table.Th>Email</Table.Th><Table.Th>Program</Table.Th><Table.Th>Year</Table.Th><Table.Th>Working</Table.Th></Table.Tr></Table.Thead>
@@ -205,9 +191,8 @@ export default function StudentsPage() {
             </Table.ScrollContainer>
           </DataTableShell>
           {totalPages > 1 && !loading && <Group justify="space-between" mt="md" wrap="wrap"><Text size="sm" c="dimmed">Page {page} of {totalPages}</Text><Pagination total={totalPages} value={page} onChange={handlePageChange} /></Group>}
-        </Grid.Col>
-        {selectedStudent && <Grid.Col span={{ base: 12, xl: 4 }}><StudentHistorySidebar user={selectedStudent} onClose={() => setSelectedStudent(null)} /></Grid.Col>}
-      </Grid>
-    </>
+        </div>
+      </ResizableSplitView>
+    </div>
   );
 }
