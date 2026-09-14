@@ -17,11 +17,20 @@ export default function AssessmentResponsesModal({ assessmentId, opened, onClose
 
   useEffect(() => {
     if (!opened || !assessmentId) return;
-    setLoading(true);
-    getAprioriResult(assessmentId)
-      .then((r) => setResponses(r.data?.responses ?? []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    let active = true;
+    const loadResponses = async () => {
+      setLoading(true);
+      try {
+        const response = await getAprioriResult(assessmentId);
+        if (active) setResponses(response.data?.responses ?? []);
+      } catch (error) {
+        if (active) console.error(error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void loadResponses();
+    return () => { active = false; };
   }, [opened, assessmentId]);
 
   return (

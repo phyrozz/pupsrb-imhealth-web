@@ -95,10 +95,13 @@ button, input, textarea { font: inherit; }
 .students-workspace { height: calc(100dvh - 144px); display: flex; min-height: 0; flex-direction: column; overflow: hidden; }
 .students-workspace > .resizable-split-view, .students-workspace > .resizable-split-view > * { min-height: 0; }
 .students-workspace > .resizable-split-view { flex: 1; }
+.students-workspace > .resizable-split-single { flex: 1; min-height: 0; }
+.resizable-split-single > div { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .resizable-split-main > div { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .students-result-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .students-result-panel > .mantine-ScrollArea-root { flex: 1; min-height: 0; }
 .students-result-panel .mantine-ScrollArea-viewport { max-height: 100%; }
+.assessments-list-pane { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 @media (max-width: 75em) { .students-workspace { height: auto; overflow: visible; } .resizable-split-main > div { height: auto; } .students-result-panel { min-height: 260px; } }
 @media (max-width: 75em) { .resizable-split-view { display: block; } .resizable-split-handle { display: none; } .resizable-split-detail { margin-top: 16px; } }
 @media (max-width: 75em) { .student-detail-panel { position: static; max-height: none; } }

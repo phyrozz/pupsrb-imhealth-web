@@ -81,7 +81,7 @@ export default function StudentHistorySidebar({
   }, [user.user_id]);
 
   useEffect(() => {
-    loadData();
+    void Promise.resolve().then(loadData);
   }, [loadData]);
 
   const handleSave = async () => {

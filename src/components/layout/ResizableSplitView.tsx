@@ -39,7 +39,7 @@ export default function ResizableSplitView({ children, detail }: { children: Rea
     return () => window.removeEventListener('resize', onResize);
   }, [constrain]);
 
-  if (!detail) return <div>{children}</div>;
+  if (!detail) return <div className="resizable-split-single">{children}</div>;
 
   return (
     <div ref={containerRef} className="resizable-split-view" style={{ '--detail-width': `${detailWidth}px` } as React.CSSProperties}>
