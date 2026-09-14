@@ -14,6 +14,7 @@ import GenerateReportPage from './pages/GenerateReportPage';
 import GenerateByProgramPage from './pages/GenerateByProgramPage';
 import GenerateByStudentPage from './pages/GenerateByStudentPage';
 import MyAccountPage from './pages/MyAccountPage';
+import CounselorWorkloadPage from './pages/CounselorWorkloadPage';
 
 // Student-facing pages
 import AssessmentLoginPage from './pages/assessment/AssessmentLoginPage';
@@ -37,7 +38,7 @@ function RequireStudentAuth({ children }: { children: React.ReactNode }) {
 
 function AdminHome() {
   const { can, data } = usePermissions();
-  const destinations = [['dashboard', '/dashboard'], ['students', '/students'], ['assessments', '/student-assessments'], ['reports', '/generate-report']];
+  const destinations = [['dashboard', '/dashboard'], ['students', '/students'], ['workload', '/counselor-workload'], ['assessments', '/student-assessments'], ['reports', '/generate-report']];
   const destination = destinations.find(([module]) => can(module))?.[1] ?? (data.role_name === 'su_admin' && can('permissions') ? '/role-permissions' : '/my-account');
   return <Navigate to={destination} replace />;
 }
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="dashboard" element={<RequirePermission module="dashboard"><DashboardPage /></RequirePermission>} />
         <Route path="students" element={<RequirePermission module="students"><StudentsPage /></RequirePermission>} />
         <Route path="student-assessments" element={<RequirePermission module="assessments"><StudentAssessmentsPage /></RequirePermission>} />
+        <Route path="counselor-workload" element={<RequirePermission module="workload"><CounselorWorkloadPage /></RequirePermission>} />
         <Route path="generate-report" element={<RequirePermission module="reports"><GenerateReportPage /></RequirePermission>} />
         <Route path="generate-report/by-program" element={<RequirePermission module="reports" dependencies={['assessments']}><GenerateByProgramPage /></RequirePermission>} />
         <Route path="generate-report/by-student" element={<RequirePermission module="reports" dependencies={['students', 'assessments']}><GenerateByStudentPage /></RequirePermission>} />

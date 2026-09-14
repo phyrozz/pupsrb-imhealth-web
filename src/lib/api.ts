@@ -79,6 +79,29 @@ export const updateCounselingStatus = (assessmentId: string, data: unknown) =>
   api.put(`/assessments/${assessmentId}/counseling-status`, data);
 export const sendStatusEmail = (data: unknown) => api.post('/assessments/send-status-email', data);
 
+export interface WorkloadItem {
+  assessment_id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  student_number: string;
+  result_scenario: string;
+  workload_status: 'assigned' | 'in_review' | 'completed' | null;
+  assigned_admin_id: string | null;
+  assigned_to: string | null;
+}
+
+export interface CounselorWorkloadResponse {
+  items: WorkloadItem[];
+  counselors?: { id: string; email: string }[];
+}
+
+export const getCounselorWorkload = (scope: 'mine' | 'unassigned' | 'all') =>
+  api.get<CounselorWorkloadResponse>('/counselor-workload', { params: { scope } });
+export const claimCounselorWorkload = (assessmentId: string) => api.post(`/counselor-workload/${assessmentId}/claim`);
+export const updateCounselorWorkload = (assessmentId: string, data: { status: 'assigned' | 'in_review' | 'completed'; assigned_admin_id?: string }) =>
+  api.put(`/counselor-workload/${assessmentId}`, data);
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getDashboardStats = () => api.get<DashboardStats>('/dashboard/stats');
 export const getScenariosChart = () => api.get('/dashboard/charts/scenarios');

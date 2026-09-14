@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppShell, Avatar, Burger, Group, Text, NavLink, Button, ScrollArea, Stack } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconLayoutDashboard, IconUsers, IconClipboardList, IconFileReport, IconUser, IconLogout } from '@tabler/icons-react';
+import { IconLayoutDashboard, IconUsers, IconClipboardList, IconFileReport, IconUser, IconLogout, IconBriefcase } from '@tabler/icons-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import Brand from '../components/Brand';
@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: IconLayoutDashboard, module: 'dashboard' },
   { label: 'Students', href: '/students', icon: IconUsers, module: 'students' },
   { label: 'Assessments', href: '/student-assessments', icon: IconClipboardList, module: 'assessments' },
+  { label: 'Counselor Workload', href: '/counselor-workload', icon: IconBriefcase, module: 'workload' },
   { label: 'Generate Report', href: '/generate-report', icon: IconFileReport, module: 'reports' },
   { label: 'Role Permissions', href: '/role-permissions', icon: IconUsers, module: 'permissions' },
   { label: 'My Account', href: '/my-account', icon: IconUser, module: '' },

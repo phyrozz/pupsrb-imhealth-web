@@ -24,7 +24,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
     return () => controller.abort();
   }, [user, attempt]);
   if (errorUser?.user === user) return <Alert color="red" title="Permissions unavailable"><Stack><Text>Access could not be verified. Please try again.</Text><Button onClick={() => { setErrorUser(null); setAttempt((value) => value + 1); }}>Retry</Button></Stack></Alert>;
-  if (!result || result.user !== user) return <Stack align="center" role="status"><Loader /><Text>Loading permissions…</Text></Stack>;
+  if (!result || result.user !== user) return <Stack align="center" justify="center" mih="100dvh" p="md" role="status"><Loader /><Text ta="center">Preparing your workspace…</Text></Stack>;
   const { data } = result;
   return <Context.Provider value={{ data, can: (module, permission = 'read') => data.permissions[module]?.includes(permission) ?? false }}>{children}</Context.Provider>;
 }
