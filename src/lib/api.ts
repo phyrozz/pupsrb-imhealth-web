@@ -80,7 +80,7 @@ export const updateCounselingStatus = (assessmentId: string, data: unknown) =>
 export const sendStatusEmail = (data: unknown) => api.post('/assessments/send-status-email', data);
 
 export interface WorkloadItem {
-  assessment_id: string;
+  assessment_id: number;
   created_at: string;
   first_name: string;
   last_name: string;
@@ -98,9 +98,14 @@ export interface CounselorWorkloadResponse {
 
 export const getCounselorWorkload = (scope: 'mine' | 'unassigned' | 'all') =>
   api.get<CounselorWorkloadResponse>('/counselor-workload', { params: { scope } });
-export const claimCounselorWorkload = (assessmentId: string) => api.post(`/counselor-workload/${assessmentId}/claim`);
-export const updateCounselorWorkload = (assessmentId: string, data: { status: 'assigned' | 'in_review' | 'completed'; assigned_admin_id?: string }) =>
+export const claimCounselorWorkload = (assessmentId: number) => api.post(`/counselor-workload/${assessmentId}/claim`);
+export const updateCounselorWorkload = (assessmentId: number, data: { status: 'assigned' | 'in_review' | 'completed'; assigned_admin_id?: string }) =>
   api.put(`/counselor-workload/${assessmentId}`, data);
+
+export interface AdminUser { id: string; email: string; role_id: number; role_name: string; created_at: string }
+export interface AdminRole { id: number; role_name: string }
+export const getAdminUsers = () => api.get<{ admins: AdminUser[]; roles: AdminRole[] }>('/admin-users');
+export const createAdminUser = (data: { email: string; role_id: number }) => api.post<AdminUser>('/admin-users', data);
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getDashboardStats = () => api.get<DashboardStats>('/dashboard/stats');

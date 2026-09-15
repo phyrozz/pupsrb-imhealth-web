@@ -17,7 +17,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    api.get<Permissions>('/admin/permissions/me', { signal: controller.signal }).then(({ data }) => {
+    api.get<Permissions>('/role-permissions/me', { signal: controller.signal }).then(({ data }) => {
       if (!data || !Number.isInteger(data.role_id) || typeof data.role_name !== 'string' || !data.permissions || typeof data.permissions !== 'object' || Array.isArray(data.permissions) || Object.values(data.permissions).some((value) => !Array.isArray(value) || value.some((item) => typeof item !== 'string'))) throw new Error('Invalid permissions response');
       if (!controller.signal.aborted) setResult({ user, data });
     }).catch(() => { if (!controller.signal.aborted) setErrorUser({ user }); });

@@ -31,7 +31,7 @@ export default function RolePermissionsPage() {
   const [success, setSuccess] = useState('');
   const load = useCallback(async () => {
     setLoading(true); setError('');
-    try { const { data } = await api.get<unknown>('/admin/permissions'); if (!isMatrix(data)) throw new Error('Invalid permission matrix response'); setMatrix(data); }
+    try { const { data } = await api.get<unknown>('/role-permissions'); if (!isMatrix(data)) throw new Error('Invalid permission matrix response'); setMatrix(data); }
     catch { setError('The permission matrix could not be loaded.'); setMatrix(null); }
     finally { setLoading(false); }
   }, []);
@@ -47,7 +47,7 @@ export default function RolePermissionsPage() {
     if (!role || immutable) return;
     setSaving(true); setError(''); setSuccess('');
     try {
-      await api.put(`/admin/permissions/roles/${role}`, { grants: selected.map((key) => { const [module_id, permission_type_id] = key.split(':').map(Number); return { module_id, permission_type_id }; }) });
+      await api.put(`/role-permissions/${role}`, { grants: selected.map((key) => { const [module_id, permission_type_id] = key.split(':').map(Number); return { module_id, permission_type_id }; }) });
       await load(); setRole(null); setSelected([]); setSuccess('Role permissions saved.');
     } catch { setError('Permissions could not be saved. Please retry.'); }
     finally { setSaving(false); }

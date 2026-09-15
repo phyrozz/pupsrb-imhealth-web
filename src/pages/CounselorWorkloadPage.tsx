@@ -16,7 +16,7 @@ export default function CounselorWorkloadPage() {
   const [scope, setScope] = useState<Scope>('mine');
   const [payload, setPayload] = useState<CounselorWorkloadResponse>({ items: [] });
   const [loading, setLoading] = useState(true);
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
