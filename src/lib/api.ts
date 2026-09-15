@@ -74,7 +74,13 @@ export const listAssessments = (params: {
 }) => api.get('/assessments', { params });
 export const submitAssessment = (data: unknown) => api.post('/assessments', data);
 export const getAssessmentAvailability = () => api.get<{ available: boolean; next_available_at: string | null }>('/assessments/availability');
-export const getAprioriResult = (assessmentId: string) => api.get(`/assessments/${assessmentId}/apriori`);
+export interface AssessmentResult {
+  assessment_id: string;
+  responses: number[];
+}
+
+export const getAprioriResult = (assessmentId: string) =>
+  api.get<AssessmentResult>(`/assessments/${assessmentId}/apriori`);
 export const updateCounselingStatus = (assessmentId: string, data: unknown) =>
   api.put(`/assessments/${assessmentId}/counseling-status`, data);
 export const sendStatusEmail = (data: unknown) => api.post('/assessments/send-status-email', data);
