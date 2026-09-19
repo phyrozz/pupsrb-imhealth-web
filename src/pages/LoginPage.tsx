@@ -141,7 +141,7 @@ export default function LoginPage() {
           {!showNewPasswordForm && (
             <Text ta="center" size="sm">
               Not an admin?{' '}
-              <Anchor component={Link} to="/assessment/login">
+              <Anchor component={Link} to="/">
                 Log in as a student
               </Anchor>
             </Text>

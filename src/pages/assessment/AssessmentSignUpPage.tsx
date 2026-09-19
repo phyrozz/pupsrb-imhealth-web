@@ -242,7 +242,7 @@ export default function AssessmentSignUpPage() {
 
               <Text ta="center" size="sm">
                 Already have an account?{' '}
-                <Anchor component={Link} to="/assessment/login">Sign in</Anchor>
+                <Anchor component={Link} to="/">Sign in</Anchor>
               </Text>
             </Stack>
           </form>

@@ -59,8 +59,27 @@ export interface GetStudentsOptions {
 export const getStudents = ({ signal, ...params }: GetStudentsOptions) =>
   api.get('/students', { params, signal });
 export const getStudent = (userId: string) => api.get(`/students/${userId}`);
+export interface StudentDetailsUpdate {
+  first_name: string;
+  middle_name: string | null;
+  last_name: string;
+  name_suffix: string | null;
+  student_number: string;
+  birth_date: string;
+  program_id: number | null;
+  year: number;
+  marital_status: string | null;
+  is_working_student: boolean;
+}
+export const updateStudent = (userId: string, data: StudentDetailsUpdate) => api.put(`/students/${userId}`, data);
 export const createPersonalDetails = (data: unknown) => api.post('/students/personal-details', data);
-export const updatePersonalDetails = (data: unknown) => api.put('/students/personal-details', data);
+export interface OwnStudentDetails extends Omit<StudentDetailsUpdate, 'marital_status'> {
+  email: string;
+  marital_status_id: number | null;
+}
+export type OwnStudentDetailsUpdate = Omit<OwnStudentDetails, 'email'>;
+export const getPersonalDetails = () => api.get<OwnStudentDetails>('/students/personal-details');
+export const updatePersonalDetails = (data: OwnStudentDetailsUpdate) => api.put<OwnStudentDetails>('/students/personal-details', data);
 export const importStudentsCsv = (data: { csv: string }) => api.post('/students/import', data);
 
 // ── Assessments ───────────────────────────────────────────────────────────────

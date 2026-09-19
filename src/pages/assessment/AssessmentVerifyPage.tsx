@@ -52,7 +52,7 @@ export default function AssessmentVerifyPage() {
         );
       });
       sessionStorage.removeItem('pendingStudentVerificationEmail');
-      navigate('/assessment/login', { state: { email: email.trim(), verified: true } });
+      navigate('/', { state: { email: email.trim(), verified: true } });
     } catch (confirmError: unknown) {
       setError(confirmationErrorMessage(confirmError));
     } finally {
@@ -121,7 +121,7 @@ export default function AssessmentVerifyPage() {
         </form>
 
         <Text ta="center" size="sm">
-          Already verified? <Anchor component={Link} to="/assessment/login">Sign in</Anchor>
+          Already verified? <Anchor component={Link} to="/">Sign in</Anchor>
         </Text>
       </Stack>
     </AuthLayout>

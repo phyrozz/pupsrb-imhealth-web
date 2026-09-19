@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import {
   Alert,
@@ -186,8 +186,8 @@ export default function AssessmentFormPage() {
               <Title order={2}>Assessment Form</Title>
               <Text c="dimmed" size="sm">Please answer every item based on how you have been feeling recently.</Text>
             </div>
-            <Group gap="xs"><ThemeToggle /><Button variant="subtle" color="red" leftSection={<IconLogout size={16} />}
-              onClick={() => { signOut(); navigate('/assessment/login'); }}>
+            <Group gap="xs"><ThemeToggle />{detailsStatus === 'ready' && <Button component={Link} to="/assessment/my-details" variant="light">My details</Button>}<Button variant="subtle" color="red" leftSection={<IconLogout size={16} />}
+              onClick={() => { signOut(); navigate('/'); }}>
               Sign Out
             </Button></Group>
           </Group>

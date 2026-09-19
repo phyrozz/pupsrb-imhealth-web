@@ -2,13 +2,14 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { LoadingOverlay } from '@mantine/core';
 
-import { PermissionsProvider, RequirePermission, usePermissions } from './context/PermissionsContext';
+import { PermissionsProvider, RequirePermission } from './context/PermissionsContext';
 import RolePermissionsPage from './pages/RolePermissionsPage';
 
 import AdminLayout from './layouts/AdminLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import StudentsPage from './pages/StudentsPage';
+import EditStudentPage from './pages/EditStudentPage';
 import StudentAssessmentsPage from './pages/StudentAssessmentsPage';
 import GenerateReportPage from './pages/GenerateReportPage';
 import GenerateByProgramPage from './pages/GenerateByProgramPage';
@@ -22,37 +23,34 @@ import AssessmentLoginPage from './pages/assessment/AssessmentLoginPage';
 import AssessmentSignUpPage from './pages/assessment/AssessmentSignUpPage';
 import AssessmentVerifyPage from './pages/assessment/AssessmentVerifyPage';
 import AssessmentFormPage from './pages/assessment/AssessmentFormPage';
+import StudentDetailsPage from './pages/assessment/StudentDetailsPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, activePool, isLoading } = useAuth();
   if (isLoading) return <LoadingOverlay visible />;
-  if (!user || activePool !== 'admin') return <Navigate to="/login" replace />;
+  if (!user || activePool !== 'admin') return <Navigate to="/admin" replace />;
   return <>{children}</>;
 }
 
 function RequireStudentAuth({ children }: { children: React.ReactNode }) {
   const { user, activePool, isLoading } = useAuth();
   if (isLoading) return <LoadingOverlay visible />;
-  if (!user || activePool !== 'student') return <Navigate to="/assessment/login" replace />;
+  if (!user || activePool !== 'student') return <Navigate to="/" replace />;
   return <>{children}</>;
-}
-
-function AdminHome() {
-  const { can, data } = usePermissions();
-  const destinations = [['dashboard', '/dashboard'], ['students', '/students'], ['workload', '/counselor-workload'], ['assessments', '/student-assessments'], ['admin_users', '/admin-users'], ['reports', '/generate-report']];
-  const destination = destinations.find(([module]) => can(module))?.[1] ?? (data.role_name === 'su_admin' && can('permissions') ? '/role-permissions' : '/my-account');
-  return <Navigate to={destination} replace />;
 }
 
 export default function App() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/assessment/login" element={<AssessmentLoginPage />} />
+      <Route path="/" element={<AssessmentLoginPage />} />
+      <Route path="/admin" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/admin" replace />} />
+      <Route path="/assessment/login" element={<Navigate to="/" replace />} />
       <Route path="/assessment/sign-up" element={<AssessmentSignUpPage />} />
       <Route path="/assessment/verify" element={<AssessmentVerifyPage />} />
       <Route path="/assessment/form" element={<RequireStudentAuth><AssessmentFormPage /></RequireStudentAuth>} />
+      <Route path="/assessment/my-details" element={<RequireStudentAuth><StudentDetailsPage /></RequireStudentAuth>} />
 
       {/* Admin (protected) */}
       <Route
@@ -63,9 +61,9 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<AdminHome />} />
         <Route path="dashboard" element={<RequirePermission module="dashboard"><DashboardPage /></RequirePermission>} />
         <Route path="students" element={<RequirePermission module="students"><StudentsPage /></RequirePermission>} />
+        <Route path="students/:userId/edit" element={<RequirePermission module="students"><EditStudentPage /></RequirePermission>} />
         <Route path="student-assessments" element={<RequirePermission module="assessments"><StudentAssessmentsPage /></RequirePermission>} />
         <Route path="counselor-workload" element={<RequirePermission module="workload"><CounselorWorkloadPage /></RequirePermission>} />
         <Route path="admin-users" element={<RequirePermission module="admin_users"><AdminUsersPage /></RequirePermission>} />

@@ -160,7 +160,7 @@ export default function AssessmentLoginPage() {
               </Text>
               <Text ta="center" size="sm">
                 Are you an admin?{' '}
-                <Anchor component={Link} to="/login">
+                <Anchor component={Link} to="/admin">
                   Log in here
                 </Anchor>
               </Text>

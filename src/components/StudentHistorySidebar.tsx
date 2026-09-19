@@ -26,6 +26,7 @@ import AssessmentResponsesModal from './AssessmentResponsesModal';
 import useChartTheme from './dashboard/useChartTheme';
 import ReactApexChart from 'react-apexcharts';
 import { getStudentTrend } from '../lib/api';
+import { Link } from 'react-router-dom';
 import type { Student } from './students/types';
 import { displayDate, studentName } from './students/types';
 
@@ -61,6 +62,7 @@ export default function StudentHistorySidebar({
   const canReadHistory = can('assessments');
   const canReadTrend = canReadHistory && can('dashboard');
   const canUpdate = canReadHistory && can('assessments', 'update');
+  const canEditStudent = can('students') && can('students', 'update');
   const [error, setError] = useState('');
   const chartTheme = useChartTheme();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -142,7 +144,10 @@ export default function StudentHistorySidebar({
             </Group>
 
             <Divider mb="md" />
-            <Title order={5} mb="xs">Student profile</Title>
+            <Group justify="space-between" mb="xs">
+              <Title order={5}>Student profile</Title>
+              {canEditStudent && <Button component={Link} to={`/students/${user.user_id}/edit`} size="xs" variant="light" leftSection={<IconEdit size={14} />}>Edit details</Button>}
+            </Group>
             <SimpleGrid cols={2} spacing="xs" mb="md">
               {[["Program", user.program_initial || 'Not recorded'], ["Year level", user.year || 'Not recorded'], ["Birth date", displayDate(user.birth_date)], ["Working student", user.is_working_student ? 'Yes' : 'No']].map(([label, value]) => <div className="student-detail-item" key={label}><Text size="xs" c="dimmed">{label}</Text><Text size="sm" fw={500}>{value}</Text></div>)}
             </SimpleGrid>

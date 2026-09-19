@@ -70,7 +70,7 @@ export default function AdminLayout() {
           <Text size="sm" fw={650} px="xs">Administrator</Text>
           <Text size="xs" c="dimmed" px="xs" mb="md" truncate>{email}</Text>
           <Button fullWidth variant="light" color="brand" leftSection={<IconLogout size={18} />}
-            onClick={() => { signOut(); navigate('/login'); }}>Sign Out</Button>
+            onClick={() => { signOut(); navigate('/admin'); }}>Sign Out</Button>
         </AppShell.Section>
       </AppShell.Navbar>
       <AppShell.Main className="app-main">
