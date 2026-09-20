@@ -104,6 +104,27 @@ export const updateCounselingStatus = (assessmentId: string, data: unknown) =>
   api.put(`/assessments/${assessmentId}/counseling-status`, data);
 export const sendStatusEmail = (data: unknown) => api.post('/assessments/send-status-email', data);
 
+// Reports
+export type ReportFormat = 'pdf' | 'csv' | 'xlsx';
+export interface GenerateReportFilters {
+  programs?: string[];
+  years?: string[];
+  counseling_status_ids?: string[];
+  scenario_ids?: string[];
+  start_date?: string;
+  end_date?: string;
+  user_id?: string;
+  recommendations?: string;
+}
+
+export interface GenerateReportRequest {
+  report_type: 'program' | 'student';
+  format: ReportFormat;
+  filters: GenerateReportFilters;
+}
+
+export const generateReport = (data: GenerateReportRequest) => api.post('/generate-report', data);
+
 export interface WorkloadItem {
   assessment_id: number;
   created_at: string;

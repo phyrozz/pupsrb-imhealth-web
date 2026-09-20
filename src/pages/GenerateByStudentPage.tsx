@@ -1,25 +1,30 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Title,
-  Card,
-  Stack,
-  TextInput,
-  Textarea,
+  Alert,
   Button,
+  Card,
   Group,
-  Text,
+  Loader,
   MultiSelect,
+  Select,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+  Title,
+  UnstyledButton,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconDownload, IconSearch } from '@tabler/icons-react';
-import { getStudents, listAssessments } from '../lib/api';
+import { IconMail, IconSearch, IconSend } from '@tabler/icons-react';
+import { generateReport, getStudents, type ReportFormat } from '../lib/api';
 import { usePermissions } from '../context/PermissionsContext';
-import jsPDF from 'jspdf';
 
 const STATUSES = [
-  { value: '1', label: 'Pending' },
+  { value: '1', label: 'No Further Action' },
   { value: '2', label: 'For Additional Inquiry' },
-  { value: '3', label: 'Resolved' },
+  { value: '3', label: 'For Counseling' },
+  { value: '4', label: 'For Referral' },
+  { value: '5', label: 'Closed' },
 ];
 const SCENARIOS = [
   { value: '0', label: 'None' },
@@ -27,6 +32,31 @@ const SCENARIOS = [
   { value: '2', label: 'Scenario 2' },
   { value: '3', label: 'Scenario 3' },
 ];
+const OUTPUT_FORMATS = [
+  { value: 'pdf', label: 'PDF (.pdf)' },
+  { value: 'csv', label: 'CSV (.csv)' },
+  { value: 'xlsx', label: 'Excel workbook (.xlsx)' },
+];
+const ALL_VALUE = '__all__';
+const ALL_OPTION = { value: ALL_VALUE, label: 'All' };
+
+function updateFilterValues(nextValues: string[], currentValues: string[]) {
+  if (nextValues.includes(ALL_VALUE) && !currentValues.includes(ALL_VALUE)) return [ALL_VALUE];
+  const specificValues = nextValues.filter((value) => value !== ALL_VALUE);
+  return specificValues.length ? specificValues : [ALL_VALUE];
+}
+
+function selectedFilters(values: string[]) {
+  const filters = values.filter((value) => value !== ALL_VALUE);
+  return filters.length ? filters : undefined;
+}
+
+function toDateOnly(date: Date | null) {
+  if (!date) return undefined;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 export default function GenerateByStudentPage() {
   const { can } = usePermissions();
@@ -34,81 +64,88 @@ export default function GenerateByStudentPage() {
   const [studentSearch, setStudentSearch] = useState('');
   const [studentOptions, setStudentOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [statuses, setStatuses] = useState<string[]>([]);
-  const [scenarios, setScenarios] = useState<string[]>([]);
+  const [statuses, setStatuses] = useState<string[]>([ALL_VALUE]);
+  const [scenarios, setScenarios] = useState<string[]>([ALL_VALUE]);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [recommendations, setRecommendations] = useState('');
+  const [format, setFormat] = useState<ReportFormat>('pdf');
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [message, setMessage] = useState('');
+  const [searchPerformed, setSearchPerformed] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [error, setError] = useState('');
+  const [queued, setQueued] = useState(false);
+  const searchController = useRef<AbortController | null>(null);
+  const searchSequence = useRef(0);
 
-  const searchStudents = useCallback(async (q: string) => {
-    if (!q.trim()) return;
-    setSearching(true);
-    try {
-      const res = await getStudents({ search: q, page_size: 20, page: 1 });
-      setStudentOptions(
-        (res.data ?? []).map((s: Record<string, string>) => ({
-          value: s.user_id,
-          label: `${s.first_name} ${s.last_name} (${s.student_number})`,
-        }))
-      );
-    } catch (e) {
-      console.error(e);
-    } finally {
+  useEffect(() => () => searchController.current?.abort(), []);
+
+  const searchStudents = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      searchController.current?.abort();
+      searchSequence.current += 1;
+      setStudentOptions([]);
+      setSearchPerformed(false);
       setSearching(false);
+      return;
+    }
+    searchController.current?.abort();
+    const controller = new AbortController();
+    searchController.current = controller;
+    const sequence = ++searchSequence.current;
+    setSearching(true);
+    setSearchPerformed(true);
+    setSearchError('');
+    try {
+      const res = await getStudents({ search: query, page_size: 20, page: 1, signal: controller.signal });
+      if (controller.signal.aborted || sequence !== searchSequence.current) return;
+      setStudentOptions(
+        (res.data ?? []).map((student: Record<string, string>) => ({
+          value: student.user_id,
+          label: `${student.first_name} ${student.last_name} (${student.student_number})`,
+        })),
+      );
+    } catch {
+      if (controller.signal.aborted || sequence !== searchSequence.current) return;
+      setStudentOptions([]);
+      setSearchError('Students could not be searched. Please try again.');
+    } finally {
+      if (sequence === searchSequence.current) setSearching(false);
     }
   }, []);
 
+  const handleStudentSearch = (value: string) => {
+    setStudentSearch(value);
+    setSelectedUserId('');
+    searchStudents(value);
+  };
+
   const handleGenerate = async () => {
     if (!canDownload) return;
-    if (!selectedUserId) { setMessage('Please select a student.'); return; }
+    setError('');
+    setQueued(false);
+    if (!selectedUserId) {
+      setError('Select a student before queuing a report.');
+      return;
+    }
     setLoading(true);
-    setMessage('');
     try {
-      // Fetch all assessments for this student, then filter client-side
-      const allData: Record<string, unknown>[] = [];
-      let page = 1;
-      while (true) {
-        const res = await listAssessments({ user_id: selectedUserId, page_size: 100, page });
-        const batch: Record<string, unknown>[] = res.data ?? [];
-        if (!batch.length) break;
-        allData.push(...batch);
-        if (batch.length < 100) break;
-        page++;
-      }
-
-      let data = allData;
-      if (statuses.length) data = data.filter((r) => statuses.includes(String(r.counseling_status_id)));
-      if (scenarios.length) data = data.filter((r) => scenarios.includes(String(r.result_scenario_id)));
-      if (dateRange[0]) data = data.filter((r) => new Date(r.created_at as string) >= dateRange[0]!);
-      if (dateRange[1]) data = data.filter((r) => new Date(r.created_at as string) <= dateRange[1]!);
-
-      if (!data.length) { setMessage('No results found.'); return; }
-
-      const studentLabel = studentOptions.find((o) => o.value === selectedUserId)?.label ?? 'Student';
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text(`Report: ${studentLabel}`, 10, 15);
-      doc.setFontSize(10);
-      let y = 25;
-      data.forEach((item: Record<string, unknown>, i: number) => {
-        if (y > 270) { doc.addPage(); y = 15; }
-        const date = new Date(item.created_at as string).toLocaleDateString();
-        doc.text(`${i + 1}. ${date} — ${item.result_scenario} — ${item.counseling_status}`, 10, y);
-        y += 7;
+      await generateReport({
+        report_type: 'student',
+        format,
+        filters: {
+          user_id: selectedUserId,
+          counseling_status_ids: selectedFilters(statuses),
+          scenario_ids: selectedFilters(scenarios),
+          start_date: toDateOnly(dateRange[0]),
+          end_date: toDateOnly(dateRange[1]),
+          recommendations: recommendations.trim() || undefined,
+        },
       });
-      if (recommendations) {
-        doc.addPage();
-        doc.setFontSize(12);
-        doc.text('Recommendations:', 10, 15);
-        const lines = doc.splitTextToSize(recommendations, 190);
-        doc.setFontSize(10);
-        doc.text(lines, 10, 25);
-      }
-      doc.save('report-by-student.pdf');
-    } catch {
-      setMessage('Failed to generate report.');
+      setQueued(true);
+    } catch (cause: unknown) {
+      const response = cause as { response?: { data?: { message?: string; error?: string } } };
+      setError(response.response?.data?.message ?? response.response?.data?.error ?? 'The report could not be queued. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -124,47 +161,46 @@ export default function GenerateByStudentPage() {
               label="Search Student"
               placeholder="Type name or student number..."
               value={studentSearch}
-              onChange={(e) => { setStudentSearch(e.target.value); searchStudents(e.target.value); }}
-              rightSection={searching ? undefined : <IconSearch size={16} />}
+              onChange={(event) => handleStudentSearch(event.target.value)}
+              rightSection={searching ? <Loader size={16} /> : <IconSearch size={16} />}
+              aria-busy={searching}
               mb="xs"
             />
+            {searchError && <Alert color="red" title="Unable to search students" mb="xs">{searchError}</Alert>}
+            {searchPerformed && !searching && !searchError && studentOptions.length === 0 && <Text size="sm" c="dimmed">No matching students found.</Text>}
             {studentOptions.length > 0 && (
               <Card withBorder p="xs" radius="sm">
                 <Stack gap={4}>
-                  {studentOptions.map((o) => (
-                    <Text
-                      key={o.value}
-                      size="sm"
+                  {studentOptions.map((option) => (
+                    <UnstyledButton
+                      key={option.value}
                       p="xs"
                       style={{
                         cursor: 'pointer',
                         borderRadius: 4,
-                        background: selectedUserId === o.value ? 'var(--app-tint)' : undefined,
+                        background: selectedUserId === option.value ? 'var(--app-tint)' : undefined,
+                        textAlign: 'left',
                       }}
-                      onClick={() => { setSelectedUserId(o.value); setStudentSearch(o.label); setStudentOptions([]); }}
+                      onClick={() => {
+                        searchController.current?.abort();
+                        searchSequence.current += 1;
+                        setSelectedUserId(option.value);
+                        setStudentSearch(option.label);
+                        setStudentOptions([]);
+                        setSearchError('');
+                        setSearchPerformed(false);
+                        setSearching(false);
+                      }}
                     >
-                      {o.label}
-                    </Text>
+                      <Text size="sm">{option.label}</Text>
+                    </UnstyledButton>
                   ))}
                 </Stack>
               </Card>
             )}
           </div>
-
-          <MultiSelect
-            label="Counseling Status"
-            placeholder="All"
-            data={STATUSES}
-            value={statuses}
-            onChange={setStatuses}
-          />
-          <MultiSelect
-            label="Assessment Results"
-            placeholder="All"
-            data={SCENARIOS}
-            value={scenarios}
-            onChange={setScenarios}
-          />
+          <MultiSelect label="Counseling Status" data={[ALL_OPTION, ...STATUSES]} value={statuses} onChange={(values) => setStatuses((current) => updateFilterValues(values, current))} />
+          <MultiSelect label="Assessment Results" data={[ALL_OPTION, ...SCENARIOS]} value={scenarios} onChange={(values) => setScenarios((current) => updateFilterValues(values, current))} />
           <DatePickerInput
             type="range"
             label="Date Range"
@@ -173,23 +209,22 @@ export default function GenerateByStudentPage() {
             onChange={(value) => setDateRange(value.map((date) => date ? new Date(`${date}T00:00:00`) : null) as [Date | null, Date | null])}
             clearable
           />
-          <Textarea
-            label="Recommendations"
-            placeholder="Optional recommendations text..."
-            minRows={3}
-            value={recommendations}
-            onChange={(e) => setRecommendations(e.target.value)}
+          <Textarea label="Recommendations" placeholder="Optional recommendations text..." minRows={3} value={recommendations} onChange={(event) => setRecommendations(event.target.value)} />
+          <Select
+            label="Output format"
+            description="The finished report will be emailed to the signed-in administrator."
+            data={OUTPUT_FORMATS}
+            value={format}
+            onChange={(value) => { if (value) setFormat(value as ReportFormat); }}
+            allowDeselect={false}
+            required
           />
-          {message && <Text c={message.includes('Failed') ? 'red' : 'dimmed'} size="sm">{message}</Text>}
-          {!canDownload && <Text size="sm">Your role does not have permission to download reports.</Text>}
+          {error && <Alert color="red" title="Unable to generate report">{error}</Alert>}
+          {queued && <Alert color="green" title="Report generated" icon={<IconMail size={16} />}>Your {format.toUpperCase()} report is being prepared and will be sent to your email address when it is ready.</Alert>}
+          {!canDownload && <Alert color="yellow" title="Access restricted">Your role does not have permission to generate reports.</Alert>}
           <Group justify="flex-end">
-            <Button
-              leftSection={<IconDownload size={16} />}
-              disabled={!canDownload}
-              onClick={handleGenerate}
-              loading={loading}
-            >
-              Generate PDF
+            <Button disabled={!canDownload} onClick={handleGenerate} loading={loading}>
+              Generate report
             </Button>
           </Group>
         </Stack>

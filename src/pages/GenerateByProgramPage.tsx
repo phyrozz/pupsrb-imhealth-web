@@ -1,26 +1,28 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  Title,
-  Card,
-  Stack,
-  MultiSelect,
-  Textarea,
+  Alert,
   Button,
+  Card,
   Group,
-  Text,
+  MultiSelect,
+  Select,
+  Stack,
+  Textarea,
+  Title,
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
-import { IconDownload } from '@tabler/icons-react';
-import { listAssessments } from '../lib/api';
+import { IconMail, IconSend } from '@tabler/icons-react';
+import { generateReport, getPrograms, type Program, type ReportFormat } from '../lib/api';
 import { usePermissions } from '../context/PermissionsContext';
-import jsPDF from 'jspdf';
+import { AsyncMultiSelectField, type AsyncSelectPage } from '../components/forms';
 
-const PROGRAMS = ['BSIT', 'BSECE', 'BSIE', 'BSME', 'BSCE', 'BSEE'];
 const YEARS = ['1', '2', '3', '4', '5'];
 const STATUSES = [
-  { value: '1', label: 'Pending' },
+  { value: '1', label: 'No Further Action' },
   { value: '2', label: 'For Additional Inquiry' },
-  { value: '3', label: 'Resolved' },
+  { value: '3', label: 'For Counseling' },
+  { value: '4', label: 'For Referral' },
+  { value: '5', label: 'Closed' },
 ];
 const SCENARIOS = [
   { value: '0', label: 'None' },
@@ -28,74 +30,80 @@ const SCENARIOS = [
   { value: '2', label: 'Scenario 2' },
   { value: '3', label: 'Scenario 3' },
 ];
+const OUTPUT_FORMATS = [
+  { value: 'pdf', label: 'PDF (.pdf)' },
+  { value: 'csv', label: 'CSV (.csv)' },
+  { value: 'xlsx', label: 'Excel workbook (.xlsx)' },
+];
+const ALL_VALUE = '__all__';
+const ALL_OPTION = { value: ALL_VALUE, label: 'All' };
+
+function updateFilterValues(nextValues: string[], currentValues: string[]) {
+  if (nextValues.includes(ALL_VALUE) && !currentValues.includes(ALL_VALUE)) return [ALL_VALUE];
+  const specificValues = nextValues.filter((value) => value !== ALL_VALUE);
+  return specificValues.length ? specificValues : [ALL_VALUE];
+}
+
+function selectedFilters(values: string[]) {
+  const filters = values.filter((value) => value !== ALL_VALUE);
+  return filters.length ? filters : undefined;
+}
+
+function toDateOnly(date: Date | null) {
+  if (!date) return undefined;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
 export default function GenerateByProgramPage() {
   const { can } = usePermissions();
   const canDownload = can('reports', 'download');
-  const [programs, setPrograms] = useState<string[]>([]);
-  const [years, setYears] = useState<string[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
-  const [scenarios, setScenarios] = useState<string[]>([]);
+  const [programs, setPrograms] = useState<string[]>([ALL_VALUE]);
+  const [years, setYears] = useState<string[]>([ALL_VALUE]);
+  const [statuses, setStatuses] = useState<string[]>([ALL_VALUE]);
+  const [scenarios, setScenarios] = useState<string[]>([ALL_VALUE]);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [recommendations, setRecommendations] = useState('');
+  const [format, setFormat] = useState<ReportFormat>('pdf');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [queued, setQueued] = useState(false);
+
+  const loadPrograms = useCallback(async (query: string, page: number, signal: AbortSignal): Promise<AsyncSelectPage<Program>> => {
+    const { data } = await getPrograms({ q: query, page, pageSize: 25, signal });
+    if (!Array.isArray(data.items) || !data.items.every((program) =>
+      Number.isSafeInteger(program.id) && typeof program.initial === 'string' && typeof program.name === 'string'
+    ) || !Number.isSafeInteger(data.page) || !Number.isSafeInteger(data.page_size) ||
+      !Number.isSafeInteger(data.total) || typeof data.has_more !== 'boolean') {
+      throw new Error('Invalid programs response');
+    }
+    return data;
+  }, []);
 
   const handleGenerate = async () => {
     if (!canDownload) return;
     setLoading(true);
-    setMessage('');
+    setError('');
+    setQueued(false);
     try {
-      // API supports: search, scenario, status, page_size. Fetch all matching pages.
-      const allData: Record<string, unknown>[] = [];
-      let page = 1;
-      while (true) {
-        const res = await listAssessments({
-          page_size: 100,
-          page,
-        });
-        const batch: Record<string, unknown>[] = res.data ?? [];
-        if (!batch.length) break;
-        allData.push(...batch);
-        if (batch.length < 100) break;
-        page++;
-      }
-
-      // Client-side filtering
-      let data = allData;
-      if (programs.length) data = data.filter((r) => programs.includes(r.program_initial as string));
-      if (years.length) data = data.filter((r) => years.includes(String(r.year)));
-      if (statuses.length) data = data.filter((r) => statuses.includes(String(r.counseling_status_id)));
-      if (scenarios.length) data = data.filter((r) => scenarios.includes(String(r.result_scenario_id)));
-      if (dateRange[0]) data = data.filter((r) => new Date(r.created_at as string) >= dateRange[0]!);
-      if (dateRange[1]) data = data.filter((r) => new Date(r.created_at as string) <= dateRange[1]!);
-
-      if (!data.length) {
-        setMessage('No results found.');
-        return;
-      }
-
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text('Program Report', 10, 15);
-      doc.setFontSize(10);
-      let y = 25;
-      data.forEach((item: Record<string, unknown>, i: number) => {
-        if (y > 270) { doc.addPage(); y = 15; }
-        doc.text(`${i + 1}. ${item.first_name} ${item.last_name} — ${item.result_scenario} — ${item.counseling_status}`, 10, y);
-        y += 7;
+      await generateReport({
+        report_type: 'program',
+        format,
+        filters: {
+          programs: selectedFilters(programs),
+          years: selectedFilters(years),
+          counseling_status_ids: selectedFilters(statuses),
+          scenario_ids: selectedFilters(scenarios),
+          start_date: toDateOnly(dateRange[0]),
+          end_date: toDateOnly(dateRange[1]),
+          recommendations: recommendations.trim() || undefined,
+        },
       });
-      if (recommendations) {
-        doc.addPage();
-        doc.setFontSize(12);
-        doc.text('Recommendations:', 10, 15);
-        doc.setFontSize(10);
-        const lines = doc.splitTextToSize(recommendations, 190);
-        doc.text(lines, 10, 25);
-      }
-      doc.save('report-by-program.pdf');
-    } catch {
-      setMessage('Failed to generate report.');
+      setQueued(true);
+    } catch (cause: unknown) {
+      const response = cause as { response?: { data?: { message?: string; error?: string } } };
+      setError(response.response?.data?.message ?? response.response?.data?.error ?? 'The report could not be queued. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -106,34 +114,20 @@ export default function GenerateByProgramPage() {
       <Title order={2} mb="xl">Generate Report by Program</Title>
       <Card withBorder radius="md" p="xl" maw={600}>
         <Stack>
-          <MultiSelect
+          <AsyncMultiSelectField
             label="Programs"
-            placeholder="All"
-            data={PROGRAMS}
+            placeholder={programs.includes(ALL_VALUE) ? undefined : 'Search programs'}
+            description="Leave blank to include every program."
+            loadPage={loadPrograms}
+            getOptionValue={(program) => program.initial}
+            getOptionLabel={(program) => `${program.initial} — ${program.name}`}
             value={programs}
-            onChange={setPrograms}
+            onChange={(values) => setPrograms((current) => updateFilterValues(values, current))}
+            pinnedOptions={[ALL_OPTION]}
           />
-          <MultiSelect
-            label="Year Levels"
-            placeholder="All"
-            data={YEARS}
-            value={years}
-            onChange={setYears}
-          />
-          <MultiSelect
-            label="Counseling Status"
-            placeholder="All"
-            data={STATUSES}
-            value={statuses}
-            onChange={setStatuses}
-          />
-          <MultiSelect
-            label="Assessment Results"
-            placeholder="All"
-            data={SCENARIOS}
-            value={scenarios}
-            onChange={setScenarios}
-          />
+          <MultiSelect label="Year Levels" data={[ALL_OPTION, ...YEARS]} value={years} onChange={(values) => setYears((current) => updateFilterValues(values, current))} />
+          <MultiSelect label="Counseling Status" data={[ALL_OPTION, ...STATUSES]} value={statuses} onChange={(values) => setStatuses((current) => updateFilterValues(values, current))} />
+          <MultiSelect label="Assessment Results" data={[ALL_OPTION, ...SCENARIOS]} value={scenarios} onChange={(values) => setScenarios((current) => updateFilterValues(values, current))} />
           <DatePickerInput
             type="range"
             label="Date Range"
@@ -142,23 +136,22 @@ export default function GenerateByProgramPage() {
             onChange={(value) => setDateRange(value.map((date) => date ? new Date(`${date}T00:00:00`) : null) as [Date | null, Date | null])}
             clearable
           />
-          <Textarea
-            label="Recommendations"
-            placeholder="Optional recommendations text..."
-            minRows={3}
-            value={recommendations}
-            onChange={(e) => setRecommendations(e.target.value)}
+          <Textarea label="Recommendations" placeholder="Optional recommendations text..." minRows={3} value={recommendations} onChange={(event) => setRecommendations(event.target.value)} />
+          <Select
+            label="Output format"
+            description="The finished report will be emailed to the signed-in administrator."
+            data={OUTPUT_FORMATS}
+            value={format}
+            onChange={(value) => { if (value) setFormat(value as ReportFormat); }}
+            allowDeselect={false}
+            required
           />
-          {message && <Text c={message.includes('Failed') ? 'red' : 'dimmed'} size="sm">{message}</Text>}
-          {!canDownload && <Text size="sm">Your role does not have permission to download reports.</Text>}
+          {error && <Alert color="red" title="Unable to generate report">{error}</Alert>}
+          {queued && <Alert color="green" title="Report generated" icon={<IconMail size={16} />}>Your {format.toUpperCase()} report is being prepared and will be sent to your email address when it is ready.</Alert>}
+          {!canDownload && <Alert color="yellow" title="Access restricted">Your role does not have permission to generate reports.</Alert>}
           <Group justify="flex-end">
-            <Button
-              leftSection={<IconDownload size={16} />}
-              disabled={!canDownload}
-              onClick={handleGenerate}
-              loading={loading}
-            >
-              Generate PDF
+            <Button disabled={!canDownload} onClick={handleGenerate} loading={loading}>
+              Generate report
             </Button>
           </Group>
         </Stack>
