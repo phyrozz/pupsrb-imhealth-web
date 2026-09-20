@@ -107,10 +107,21 @@ export const sendStatusEmail = (data: unknown) => api.post('/assessments/send-st
 export interface WorkloadItem {
   assessment_id: number;
   created_at: string;
+  user_id: string;
   first_name: string;
+  middle_name: string;
   last_name: string;
+  name_suffix: string;
   student_number: string;
+  email: string;
+  program_initial: string;
+  year: string | null;
+  birth_date: string | null;
+  marital_status: string;
+  is_working_student: boolean;
   result_scenario: string;
+  previous_scenario: string | null;
+  scenario_increased: boolean;
   workload_status: 'assigned' | 'in_review' | 'completed' | null;
   assigned_admin_id: string | null;
   assigned_to: string | null;
@@ -118,11 +129,12 @@ export interface WorkloadItem {
 
 export interface CounselorWorkloadResponse {
   items: WorkloadItem[];
+  has_more: boolean;
   counselors?: { id: string; email: string }[];
 }
 
-export const getCounselorWorkload = (scope: 'mine' | 'unassigned' | 'all') =>
-  api.get<CounselorWorkloadResponse>('/counselor-workload', { params: { scope } });
+export const getCounselorWorkload = (scope: 'mine' | 'unassigned' | 'all', page: number, pageSize = 30) =>
+  api.get<CounselorWorkloadResponse>('/counselor-workload', { params: { scope, page, page_size: pageSize } });
 export const claimCounselorWorkload = (assessmentId: number) => api.post(`/counselor-workload/${assessmentId}/claim`);
 export const updateCounselorWorkload = (assessmentId: number, data: { status: 'assigned' | 'in_review' | 'completed'; assigned_admin_id?: string }) =>
   api.put(`/counselor-workload/${assessmentId}`, data);

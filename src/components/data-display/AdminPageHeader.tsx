@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 interface AdminPageHeaderProps extends GroupProps {
   title: string;
   description?: string;
+  descriptionClassName?: string;
   actions?: ReactNode;
 }
 
@@ -11,6 +12,7 @@ interface AdminPageHeaderProps extends GroupProps {
 export default function AdminPageHeader({
   title,
   description,
+  descriptionClassName,
   actions,
   ...stackProps
 }: AdminPageHeaderProps) {
@@ -18,7 +20,7 @@ export default function AdminPageHeader({
     <Group justify="space-between" align="flex-end" wrap="wrap" gap="md" {...stackProps}>
       <Stack gap={4} maw={720}>
         <Title order={2}>{title}</Title>
-        {description && <Text c="dimmed">{description}</Text>}
+        {description && <Text c="dimmed" className={['admin-page-header-description', descriptionClassName].filter(Boolean).join(' ')}>{description}</Text>}
       </Stack>
       {actions && <Group gap="sm" wrap="wrap">{actions}</Group>}
     </Group>

@@ -15,7 +15,7 @@ export default function DashboardPage() {
         <div>
           <Text className="eyebrow" mb="xs">CAMPUS OVERVIEW</Text>
           <Title order={1}>Wellbeing dashboard</Title>
-          <Text c="dimmed" mt="xs">Welcome back{email ? `, ${email}` : ''}. Here is your campus at a glance.</Text>
+          <Text c="dimmed" mt="xs" className="dashboard-module-description">Welcome back{email ? `, ${email}` : ''}. Here is your campus at a glance.</Text>
         </div>
         <Badge variant="light" size="lg" color="brand">PUP Santa Rosa</Badge>
       </Group>

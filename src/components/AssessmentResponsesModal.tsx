@@ -9,9 +9,10 @@ interface Props {
   assessmentId: string | null;
   opened: boolean;
   onClose: () => void;
+  zIndex?: number;
 }
 
-export default function AssessmentResponsesModal({ assessmentId, opened, onClose }: Props) {
+export default function AssessmentResponsesModal({ assessmentId, opened, onClose, zIndex }: Props) {
   const [responses, setResponses] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +35,7 @@ export default function AssessmentResponsesModal({ assessmentId, opened, onClose
   }, [opened, assessmentId]);
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Assessment Responses" size="xl" >
+    <Modal opened={opened} onClose={onClose} title="Assessment Responses" size="xl" zIndex={zIndex}>
       {loading ? (
         <Center h={200}><Loader /></Center>
       ) : (
